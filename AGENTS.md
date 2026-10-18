@@ -17,19 +17,36 @@ Dokument określa reguły pracy, standardy inżynieryjne oraz procedury weryfika
 
 Projekt bazuje na: **React 18/19 + TypeScript + Vite + Tailwind CSS + @dnd-kit + Lucide React + Vitest + Playwright**.
 
+* **Struktura Katalogów Projektu:**
+  * `src/components/` – komponenty widoku i interfejsu (np. `TaskCard`, `DayColumn`, `BacklogColumn`, `Header`, `AddTaskForm`, `DragOverlay`).
+  * `src/types/` – ścisłe definicje modeli i typów TypeScript (`Task`, `DayOfWeek`, `Priority`, `TaskStatus`).
+  * `src/hooks/` – centralne zarządzanie stanem i operacjami biznesowymi (`useTasks`).
+  * `src/utils/` – czyste funkcje pomocnicze (`dateUtils`, `storage`, `backup`).
+  * `src/constants/` – stałe domenowe i konfiguracyjne (`days.ts`).
+
 * **TypeScript:**
   * Tryb ścisły (*strict mode*). Bezwzględny zakaz używania typu `any` – używaj typów unijnych, precyzyjnych interfejsów lub `unknown`.
   * Model danych musi być w 100% zgodny z modelem zdefiniowanym w `spec.md` (sekcja 4).
 * **React:**
   * Komponenty funkcyjne z czystym podziałem na prezentację i logikę.
   * Centralne zarządzanie stanem zadań poprzez dedykowany hook `useTasks`.
-  * Brak niepotrzebnych re-renderów; właściwe wykorzystanie hooków (`useCallback`, `useMemo` tam, gdzie ma to uzasadnienie wydajnościowe).
+  * Brak niepotrzebnych re-renderów; właściwe wykorzystanie hooków (`useCallback`, `useMemo` oraz selektywne `React.memo` na kafelkach zadań tam, gdzie ma to uzasadnienie wydajnościowe przy operacjach DnD).
 * **Tailwind CSS:**
   * Korzystaj wyłącznie ze stylów narzędziowych (*utility classes*).
-  * Zakaz pisania tradycyjnych, luźnych plików CSS lub stylów inline (`style={{ ... }}`), chyba że wymaga tego dynamiczna kalkulacja pozycji Drag & Drop.
-* **Natywne API przeglądarki:**
-  * Logika dat oparta o natywny obiekt `Date` (brak bibliotek typu `moment` czy `date-fns`).
+  * Zakaz pisania tradycyjnych, luźnych plików CSS lub stylów inline (`style={{ ... }}`), chyba że wymaga tego dynamiczna kalkulacja pozycji Drag & Drop (`@dnd-kit`).
+  * Responsywność kalendarza: kolumny dni tygodnia muszą posiadać minimalną szerokość (`min-w-[180px]`), a kontener widoku tygodnia obsługiwać horyzontalne przewijanie (`overflow-x-auto`), zapobiegając zgniataniu kafelków.
+* **Drag & Drop (@dnd-kit):**
+  * Ochrona przed konfliktem kliknięcia z przeciąganiem: sensor wskaźnika musi wymuszać minimalne przesunięcie (`activationConstraint: { distance: 8 }`), aby kliknięcie checkboxa, flagi, edycji tekstu lub kosza nie uruchamiało przeciągania. Elementy interaktywne kafelka powinny izolować zdarzenia (`e.stopPropagation()`).
+  * Obsługa pustych kolumn: każdy kontener zrzutu (Backlog oraz 7 dni tygodnia) musi posiadać własny `droppableId` i minimalną wysokość, gwarantując możliwość upuszczenia zadania na pusty dzień.
+  * Płynność i reordering: wykorzystanie komponentu `<DragOverlay>` (z lekkim obrotem i cieniem) oraz algorytmu `arrayMove` z `@dnd-kit/sortable` do stabilnego przeliczania indeksów kolejności (`order`).
+* **Natywne API przeglądarki i Logika Dat:**
+  * Logika dat oparta wyłącznie o natywny obiekt `Date` (brak bibliotek typu `moment` czy `date-fns`).
+  * **Mapowanie dni tygodnia:** `Date.getDay()` zwraca `0` dla niedzieli. Obowiązkowe jest bezwzględne mapowanie: `0 -> 'sun'`, `1 -> 'mon'` ... `6 -> 'sat'`. Tydzień roboczy aplikacji zawsze rozpoczyna się od poniedziałku (`['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun']`).
+  * Dynamiczne odświeżanie etykiety "DZISIAJ" oraz statusu zaległości (np. rekalkulacja przy zdarzeniu `window.onfocus` / interwale, aby obsłużyć przejście północy bez przeładowania strony).
   * Unikalne identyfikatory generowane przez `crypto.randomUUID()`.
+* **Persystencja i Odporność LocalStorage:**
+  * Wszystkie operacje odczytu/zapisu `localStorage` muszą być zabezpieczone blokiem `try/catch` (obsługa trybu incognito oraz limitu `QUOTA_EXCEEDED_ERR`).
+  * W razie uszkodzonych danych JSON w pamięci aplikacja nie może ulec awarii (crash) – wymagany bezpieczny fallback do pustej tablicy `[]` z ostrzeżeniem w konsoli.
 
 ---
 
@@ -69,13 +86,20 @@ Nigdy nie uznawaj zadania za zakończone bez faktycznego sprawdzenia:
 
 ## 6. Jakość Kodu i Bezpieczeństwo
 
-### Jakość i Dostępność:
+### Jakość, Dostępność i Testowalność:
 * **Czytelność:** Samowyjaśniające się nazwy funkcji i zmiennych.
 * **Dostępność (a11y):** Wszystkie przyciski oparte o ikony (`lucide-react`) muszą posiadać atrybut `aria-label` lub tekst pomocniczy dla czytników ekranowych.
-* **Odporność na błędy brzegowe:** Obsłuż stany puste (pusty Backlog, brak zadań w danym dniu) oraz przypadki awarii odczytu `localStorage`.
+* **Obsługa interakcji i formularzy:** Szybkie dodawanie zadań z blokadą pustych ciągów (`trim()`) i zachowaniem fokusu po zatwierdzeniu `Enter`; edycja inline tytułu zatwierdzana `Enter` / `onBlur` oraz anulowana `Escape`.
+* **Identyfikatory testowe dla Playwright:** Wszystkie kluczowe kontenery zrzutu (Backlog, kolumny dni), kafelki zadań oraz przyciski akcji (usuwanie, priorytet, powrót do backlogu, eksport/import) muszą posiadać jednoznaczne atrybuty `data-testid` (np. `data-testid="task-card"`, `data-testid="column-backlog"`), eliminujące ryzyko niestabilnych testów Drag & Drop.
+* **Odporność na błędy brzegowe:** Obsłuż stany puste (pusty Backlog, brak zadań w danym dniu z subtelnym komunikatem) oraz przypadki awarii odczytu `localStorage`.
 
 ### Bezpieczeństwo (Local-First):
-* **Sanityzacja i Walidacja Importu JSON:** Pliki JSON importowane przez użytkownika muszą przejść walidację schematu (poprawność pól, typy, długość stringów) przed zapisaniem do `localStorage`.
+* **Sanityzacja i Walidacja Importu JSON (Type Guards):**
+  * Z uwagi na brak zewnętrznych bibliotek schematów (np. Zod), walidacja importowanego pliku JSON musi być oparta na czystych funkcjach strażników typu (*type guards*) w TypeScript.
+  * Weryfikacja każdego rekordu: `id` (string), `title` (niepusty string o długości do 500 znaków po usunięciu białych znaków), unie `status` (`'todo' | 'done'`), `priority` (`'low' | 'medium' | 'high'`), `day` (`'mon' ... 'sun' | null`), `order` (liczba całkowita >= 0), `createdAt` (poprawny format daty ISO).
+  * Odrzucanie nieznanych właściwości i sanityzacja tekstu (ochrona przed atakami XSS).
+  * **Ochrona przed utratą danych:** Przed zastąpieniem bazy zadań importowanym plikiem należy bezwzględnie wyświetlić użytkownikowi prośbę o potwierdzenie akcji (`window.confirm` lub dedykowany modal ostrzegawczy).
+  * Standardowa nazwa pliku eksportu: `organizer-backup-YYYY-MM-DD.json`.
 * **Zakaz `dangerouslySetInnerHTML`:** Treść zadań renderuj wyłącznie jako bezpieczny tekst.
 * **Prywatność i Offline:** Bezwzględny brak telemetrii, analityki i zewnętrznych wywołań API bez wyraźnej dyspozycji użytkownika.
 
