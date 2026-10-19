@@ -1,4 +1,6 @@
-import React from 'react';
+import React, { useMemo } from 'react';
+import { useDroppable } from '@dnd-kit/core';
+import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import type { Task } from '../types';
 import { BACKLOG_DROPPABLE_ID } from '../constants';
 import { AddTaskForm } from './AddTaskForm';
@@ -20,6 +22,8 @@ export interface BacklogColumnProps {
 
 /**
  * Lewy stały panel aplikacji prezentujący Backlog (skrzynkę zadań nieprzypisanych).
+ * Integruje się z @dnd-kit jako kontener zrzutu (Droppable) o identyfikatorze 'backlog'
+ * oraz SortableContext o pionowej strategii sortowania (verticalListSortingStrategy).
  */
 export function BacklogColumn({
   tasks,
@@ -31,6 +35,32 @@ export function BacklogColumn({
 }: BacklogColumnProps) {
   const count = taskCount ?? tasks?.length ?? 0;
   const actionContent = headerAction !== undefined ? headerAction : onAddTask ? <AddTaskForm onAddTask={onAddTask} /> : null;
+
+  const { setNodeRef, isOver } = useDroppable({
+    id: BACKLOG_DROPPABLE_ID,
+    data: {
+      type: 'Column',
+      day: null,
+    },
+  });
+
+  const taskIds = useMemo(() => {
+    if (tasks && tasks.length > 0) {
+      return tasks.map((t) => t.id);
+    }
+    const ids: string[] = [];
+    React.Children.forEach(children, (child) => {
+      if (React.isValidElement(child)) {
+        const childTask = (child.props as { task?: Task })?.task;
+        if (childTask?.id) {
+          ids.push(childTask.id);
+        } else if (child.key) {
+          ids.push(String(child.key).replace(/^\.\$/g, ''));
+        }
+      }
+    });
+    return ids;
+  }, [tasks, children]);
 
   return (
     <aside
@@ -61,23 +91,29 @@ export function BacklogColumn({
         {actionContent ? <div className="mt-3">{actionContent}</div> : null}
       </div>
 
-      {/* Kontener listy zadań (obszar zrzutu dla dnd-kit) */}
+      {/* Kontener listy zadań (obszar zrzutu dla dnd-kit z SortableContext) */}
       <div
+        ref={setNodeRef}
         id={BACKLOG_DROPPABLE_ID}
         data-testid="droppable-backlog"
-        className="flex flex-1 flex-col gap-2 overflow-y-auto p-3 min-h-[160px]"
+        data-is-over={isOver ? 'true' : 'false'}
+        className={`flex flex-1 flex-col gap-2 overflow-y-auto p-3 min-h-[160px] rounded-b-xl transition-colors ${
+          isOver ? 'bg-blue-100/40 ring-2 ring-blue-400 ring-inset' : ''
+        }`}
       >
-        {children ? (
-          children
-        ) : (
-          <div
-            data-testid="backlog-empty-state"
-            className="flex flex-1 flex-col items-center justify-center gap-1 rounded-lg border border-dashed border-slate-200 p-6 text-center text-xs text-slate-400"
-          >
-            <span className="font-medium text-slate-500">Brak zadań w Backlogu</span>
-            <span className="text-[11px] text-slate-400">Wpisz zadanie powyżej</span>
-          </div>
-        )}
+        <SortableContext items={taskIds} strategy={verticalListSortingStrategy}>
+          {children ? (
+            children
+          ) : (
+            <div
+              data-testid="backlog-empty-state"
+              className="flex flex-1 flex-col items-center justify-center gap-1 rounded-lg border border-dashed border-slate-200 p-6 text-center text-xs text-slate-400"
+            >
+              <span className="font-medium text-slate-500">Brak zadań w Backlogu</span>
+              <span className="text-[11px] text-slate-400">Wpisz zadanie powyżej</span>
+            </div>
+          )}
+        </SortableContext>
       </div>
     </aside>
   );

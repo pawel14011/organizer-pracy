@@ -106,4 +106,13 @@ describe('BacklogColumn component', () => {
     expect(screen.getByTestId('custom-action')).toBeInTheDocument();
     expect(screen.queryByTestId('add-task-form')).not.toBeInTheDocument();
   });
+
+  it('renders droppable container with data-is-over attribute and min height', () => {
+    render(<BacklogColumn />);
+
+    const droppable = screen.getByTestId('droppable-backlog');
+    expect(droppable).toBeInTheDocument();
+    expect(droppable).toHaveAttribute('data-is-over', 'false');
+    expect(droppable).toHaveClass('min-h-[160px]');
+  });
 });

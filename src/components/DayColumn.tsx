@@ -1,4 +1,6 @@
-import React from 'react';
+import React, { useMemo } from 'react';
+import { useDroppable } from '@dnd-kit/core';
+import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import type { Task, Weekday } from '../types';
 import { DAY_LABELS, DAY_SHORT_LABELS } from '../constants';
 
@@ -23,6 +25,8 @@ export interface DayColumnProps {
 
 /**
  * Kolumna pojedynczego dnia tygodnia w panelu stałego tygodnia.
+ * Integruje się z @dnd-kit jako kontener zrzutu (Droppable) o identyfikatorze odpowiadającym
+ * dniowi tygodnia ('mon'..'sun') oraz SortableContext o pionowej strategii sortowania (verticalListSortingStrategy).
  */
 export function DayColumn({
   day,
@@ -37,6 +41,32 @@ export function DayColumn({
   const count = taskCount ?? tasks?.length ?? 0;
   const fullLabel = DAY_LABELS[day];
   const shortLabel = DAY_SHORT_LABELS[day];
+
+  const { setNodeRef, isOver } = useDroppable({
+    id: day,
+    data: {
+      type: 'DayColumn',
+      day,
+    },
+  });
+
+  const taskIds = useMemo(() => {
+    if (tasks && tasks.length > 0) {
+      return tasks.map((t) => t.id);
+    }
+    const ids: string[] = [];
+    React.Children.forEach(children, (child) => {
+      if (React.isValidElement(child)) {
+        const childTask = (child.props as { task?: Task })?.task;
+        if (childTask?.id) {
+          ids.push(childTask.id);
+        } else if (child.key) {
+          ids.push(String(child.key).replace(/^\.\$/g, ''));
+        }
+      }
+    });
+    return ids;
+  }, [tasks, children]);
 
   // Stylizacja zależna od stanu dnia (dzisiejszy vs przeszły vs standardowy)
   const containerStateClasses = isToday
@@ -91,23 +121,29 @@ export function DayColumn({
         {headerAction ? <div className="mt-2">{headerAction}</div> : null}
       </div>
 
-      {/* Kontener listy zadań (obszar zrzutu dla dnd-kit) */}
+      {/* Kontener listy zadań (obszar zrzutu dla dnd-kit z SortableContext) */}
       <div
+        ref={setNodeRef}
         id={day}
         data-testid={`droppable-${day}`}
-        className="flex flex-1 flex-col gap-2 overflow-y-auto p-2 min-h-[160px]"
+        data-is-over={isOver ? 'true' : 'false'}
+        className={`flex flex-1 flex-col gap-2 overflow-y-auto p-2 min-h-[160px] rounded-b-xl transition-colors ${
+          isOver ? 'bg-blue-100/50 ring-2 ring-blue-400 ring-inset' : ''
+        }`}
       >
-        {children ? (
-          children
-        ) : (
-          <div
-            data-testid={`day-empty-state-${day}`}
-            className="flex flex-1 flex-col items-center justify-center gap-1 rounded-lg border border-dashed border-slate-200/80 p-4 text-center text-xs text-slate-400"
-          >
-            <span className="font-medium text-slate-500">Brak zadań</span>
-            <span className="text-[11px] text-slate-400">Upuść zadanie tutaj</span>
-          </div>
-        )}
+        <SortableContext items={taskIds} strategy={verticalListSortingStrategy}>
+          {children ? (
+            children
+          ) : (
+            <div
+              data-testid={`day-empty-state-${day}`}
+              className="flex flex-1 flex-col items-center justify-center gap-1 rounded-lg border border-dashed border-slate-200/80 p-4 text-center text-xs text-slate-400"
+            >
+              <span className="font-medium text-slate-500">Brak zadań</span>
+              <span className="text-[11px] text-slate-400">Upuść zadanie tutaj</span>
+            </div>
+          )}
+        </SortableContext>
       </div>
     </div>
   );

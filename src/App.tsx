@@ -8,9 +8,16 @@ import {
   type DragCancelEvent,
 } from '@dnd-kit/core';
 import { useTasks, useDndSensors } from './hooks';
-import { Header, BacklogColumn, WeekGrid, DayColumn, TaskCard } from './components';
-import { WEEKDAYS } from './constants';
+import {
+  Header,
+  BacklogColumn,
+  WeekGrid,
+  DayColumn,
+  SortableTaskCard,
+} from './components';
+import { WEEKDAYS, BACKLOG_DROPPABLE_ID } from './constants';
 import { isToday, isPastDay } from './utils';
+import type { DayOfWeek, Weekday } from './types';
 
 /**
  * Właściwości komponentu App (wspierające rozszerzalność oraz testy integracyjne dnd-kit).
@@ -38,6 +45,7 @@ export function App({
   onDragCancel: onDragCancelProp,
 }: AppProps = {}) {
   const {
+    tasks,
     backlogTasks,
     getTasksByDay,
     addTask,
@@ -45,6 +53,7 @@ export function App({
     cycleTaskPriority,
     deleteTask,
     updateTask,
+    moveTask,
     returnToBacklog,
   } = useTasks();
 
@@ -81,7 +90,7 @@ export function App({
     [onDragStartProp]
   );
 
-  // Obsługa zdarzenia przesuwania elementu nad kontenerem (pod Zadanie 4.2 i 4.3)
+  // Obsługa zdarzenia przesuwania elementu nad kontenerem
   const handleDragOver = useCallback(
     (event: DragOverEvent) => {
       onDragOverProp?.(event);
@@ -89,13 +98,57 @@ export function App({
     [onDragOverProp]
   );
 
-  // Obsługa zakończenia przeciągania (pod Zadanie 4.3)
+  // Obsługa zakończenia przeciągania: wyznaczenie docelowego dnia i indeksu, oraz wywołanie moveTask
   const handleDragEnd = useCallback(
     (event: DragEndEvent) => {
       setActiveTaskId(null);
       onDragEndProp?.(event);
+
+      const { active, over } = event;
+      if (!over) {
+        return;
+      }
+
+      const activeId = String(active.id);
+      const overId = String(over.id);
+
+      if (activeId === overId) {
+        return;
+      }
+
+      const activeTask = tasks.find((task) => task.id === activeId);
+      if (!activeTask) {
+        return;
+      }
+
+      let targetDay: DayOfWeek | undefined;
+      let targetIndex = 0;
+
+      if (overId === BACKLOG_DROPPABLE_ID) {
+        targetDay = null;
+        targetIndex = backlogTasks.length;
+      } else if (WEEKDAYS.includes(overId as Weekday)) {
+        targetDay = overId as Weekday;
+        targetIndex = getTasksByDay(targetDay).length;
+      } else {
+        // overId wskazuje na inny kafelek zadania
+        const overTask = tasks.find((task) => task.id === overId);
+        if (overTask) {
+          targetDay = overTask.day;
+          const targetColumnTasks =
+            targetDay === null ? backlogTasks : getTasksByDay(targetDay);
+          const foundIndex = targetColumnTasks.findIndex(
+            (task) => task.id === overId
+          );
+          targetIndex = foundIndex >= 0 ? foundIndex : targetColumnTasks.length;
+        }
+      }
+
+      if (targetDay !== undefined) {
+        moveTask(activeId, targetDay, targetIndex);
+      }
     },
-    [onDragEndProp]
+    [tasks, backlogTasks, getTasksByDay, moveTask, onDragEndProp]
   );
 
   // Obsługa anulowania przeciągania (np. klawisz Escape)
@@ -133,7 +186,7 @@ export function App({
           >
             {backlogTasks.length > 0
               ? backlogTasks.map((task) => (
-                  <TaskCard
+                  <SortableTaskCard
                     key={task.id}
                     task={task}
                     isDragging={activeTaskId === task.id}
@@ -164,7 +217,7 @@ export function App({
                 >
                   {dayTasks.length > 0
                     ? dayTasks.map((task) => (
-                        <TaskCard
+                        <SortableTaskCard
                           key={task.id}
                           task={task}
                           isDragging={activeTaskId === task.id}
