@@ -46,8 +46,9 @@ export function containsMaliciousPayload(text: string): boolean {
     return true;
   }
 
-  // Wykrywanie atrybutów inline event handlerów (np. onerror=, onload=, onclick=)
-  const eventHandlerPattern = /\bon[a-z]+\s*=/i;
+  // Wykrywanie atrybutów inline event handlerów (np. onerror=, onload=, onclick=) z wykluczeniem zwykłych słów (np. online=, onboarding=)
+  const eventHandlerPattern =
+    /\bon(?:click|dblclick|load|error|mouse[a-z]+|key[a-z]+|drag[a-z]+|drop|pointer[a-z]+|touch[a-z]+|focus|blur|change|submit|reset|input|scroll|select|animation[a-z]+|transition[a-z]+)\s*=/i;
   if (eventHandlerPattern.test(text)) {
     return true;
   }
