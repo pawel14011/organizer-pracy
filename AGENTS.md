@@ -140,6 +140,11 @@ Nigdy nie uznawaj zadania za zakończone bez faktycznego sprawdzenia:
 
 Domyślnym i bezwzględnym standardem realizacji każdej nowej funkcjonalności (zadania / issue) jest praca na dedykowanej gałęzi (*feature branch*) oraz weryfikacja przez Pull Request (PR):
 
+> **Zasada potwierdzania i publikacji:** W odróżnieniu od trybu pracy bezpośrednio na gałęzi głównej (gdzie commit i push czekały na potwierdzenie), w domyślnym workflow z Feature Branch:
+> 1. Agent samodzielnie wykonuje atomowy commit i push **wyłącznie na gałęzi funkcjonalnej** oraz tworzy Pull Request do przeglądu po pomyślnej autoweryfikacji.
+> 2. Ręczne potwierdzenie użytkownika (*"zatwierdzam"*, *"działa"*, *"zaakceptowane"*, *"scal"*, *"zrób merge"*) jest **bezwzględnie wymagane przed scaleniem (merge) do gałęzi `main`** i zamknięciem zgłoszenia.
+
+
 1. **Dedykowana gałąź dla każdego zadania (Feature Branch):**
    * Przed rozpoczęciem prac upewnij się, że lokalna gałąź `main` jest zsynchronizowana ze zdalnym repozytorium (`git checkout main && git pull`).
    * Utwórz nową gałąź z czytelną nazwą nawiązującą do zadania (np. `feature/issue-<nr>-<opis>` lub `feat/<nr>-<opis>`) i przełącz się na nią.
