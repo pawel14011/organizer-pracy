@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { arrayMove } from '@dnd-kit/sortable';
 import type { Task, DayOfWeek, Weekday, Priority, TaskStatus } from '../types';
+import { WEEKDAYS } from '../constants';
 import { DEFAULT_TASKS_STORAGE_KEY, loadTasksFromStorage, saveTasksToStorage, clearTasksFromStorage } from '../utils/storage';
 
 /**
@@ -154,25 +155,48 @@ export function useTasks(optionsOrKey?: string | UseTasksOptions): UseTasksRetur
   }, [storageKey, setTasks]);
 
   /**
+   * Zoptymalizowana mapa zadań pogrupowanych według kolumn (Backlog + 7 dni tygodnia)
+   * posortowanych rosnąco według właściwości order.
+   * Dzięki useMemo tablice kolumn są kalkulowane jednorazowo przy zmianie tasks,
+   * zapewniając referencyjną stabilność wyników dla getTasksByDay oraz backlogTasks.
+   */
+  const tasksByDayMap = useMemo(() => {
+    const map = new Map<DayOfWeek, Task[]>();
+    map.set(null, []);
+    for (const wd of WEEKDAYS) {
+      map.set(wd, []);
+    }
+    for (const task of tasks) {
+      const list = map.get(task.day);
+      if (list) {
+        list.push(task);
+      } else {
+        map.set(task.day, [task]);
+      }
+    }
+    for (const list of map.values()) {
+      list.sort((a, b) => a.order - b.order);
+    }
+    return map;
+  }, [tasks]);
+
+  /**
    * Zwraca zadania dla danej kolumny (lub Backlogu), posortowane rosnąco według właściwości order.
+   * Zwraca stabilną referencję tablicy z memoizowanej mapy tasksByDayMap.
    */
   const getTasksByDay = useCallback(
     (day: DayOfWeek): Task[] => {
-      return tasks
-        .filter((task) => task.day === day)
-        .sort((a, b) => a.order - b.order);
+      return tasksByDayMap.get(day) ?? [];
     },
-    [tasks]
+    [tasksByDayMap]
   );
 
   /**
    * Zadania Backlogu (day: null), posortowane rosnąco według kolejności order.
    */
   const backlogTasks = useMemo(() => {
-    return tasks
-      .filter((task) => task.day === null)
-      .sort((a, b) => a.order - b.order);
-  }, [tasks]);
+    return tasksByDayMap.get(null) ?? [];
+  }, [tasksByDayMap]);
 
   /**
    * Dodaje nowe zadanie do Backlogu (day: null) z domyślnym priorytetem 'medium'.

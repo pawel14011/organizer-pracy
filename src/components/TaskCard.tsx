@@ -53,8 +53,8 @@ export const PRIORITY_STYLES: Record<
   },
   medium: {
     border: 'border-l-amber-500',
-    flag: 'text-amber-500',
-    hoverFlag: 'hover:text-amber-600',
+    flag: 'text-amber-600',
+    hoverFlag: 'hover:text-amber-700',
   },
   high: {
     border: 'border-l-rose-500',
@@ -208,7 +208,7 @@ export const TaskCard = React.memo(
         data-status={task.status}
         data-overdue={isOverdue ? 'true' : 'false'}
         aria-label={`Zadanie: ${task.title}`}
-        className={`group relative flex flex-col gap-2 rounded-lg border border-l-4 p-3 transition-all select-none ${touchClass} ${cursorClass} ${cardStateClasses} ${className}`.trim()}
+        className={`group relative flex flex-col gap-2 rounded-lg border border-l-4 p-3 transition-all select-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${touchClass} ${cursorClass} ${cardStateClasses} ${className}`.trim()}
         {...rest}
       >
         {/* Górny wiersz: checkbox oraz treść zadania / pole edycji inline */}
@@ -271,7 +271,7 @@ export const TaskCard = React.memo(
                 data-testid="task-overdue-badge"
                 className="inline-flex items-center gap-1 rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-semibold text-amber-800"
               >
-                <AlertCircle className="h-3 w-3 shrink-0" />
+                <AlertCircle className="h-3 w-3 shrink-0" aria-hidden="true" />
                 <span>Zaległe</span>
               </span>
             )}
@@ -289,9 +289,9 @@ export const TaskCard = React.memo(
                 data-testid="task-return-btn"
                 aria-label="Przywróć do backlogu"
                 title="Przywróć zadanie do Backlogu"
-                className="inline-flex items-center justify-center rounded p-1 text-amber-600 transition-colors hover:bg-amber-100 hover:text-amber-800"
+                className="inline-flex items-center justify-center rounded p-1 text-amber-600 transition-colors hover:bg-amber-100 hover:text-amber-800 focus:outline-none focus:ring-2 focus:ring-amber-500"
               >
-                <RotateCcw className="h-3.5 w-3.5" />
+                <RotateCcw className="h-3.5 w-3.5" aria-hidden="true" />
               </button>
             )}
 
@@ -304,9 +304,9 @@ export const TaskCard = React.memo(
               data-testid="task-priority-btn"
               aria-label={`Priorytet: ${PRIORITY_LABELS[task.priority]}. Kliknij, aby zmienić`}
               title={`Priorytet: ${PRIORITY_LABELS[task.priority]} (kliknij, aby zmienić)`}
-              className={`inline-flex items-center justify-center rounded p-1 transition-colors hover:bg-slate-100 ${priorityConfig.flag} ${priorityConfig.hoverFlag}`}
+              className={`inline-flex items-center justify-center rounded p-1 transition-colors hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500 ${priorityConfig.flag} ${priorityConfig.hoverFlag}`}
             >
-              <Flag className="h-3.5 w-3.5 fill-current" />
+              <Flag className="h-3.5 w-3.5 fill-current" aria-hidden="true" />
             </button>
 
             {/* Przycisk edycji tekstu */}
@@ -322,9 +322,9 @@ export const TaskCard = React.memo(
                 data-testid="task-edit-btn"
                 aria-label="Edytuj zadanie"
                 title="Edytuj treść zadania"
-                className="inline-flex items-center justify-center rounded p-1 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600"
+                className="inline-flex items-center justify-center rounded p-1 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
-                <Pencil className="h-3.5 w-3.5" />
+                <Pencil className="h-3.5 w-3.5" aria-hidden="true" />
               </button>
             )}
 
@@ -337,9 +337,9 @@ export const TaskCard = React.memo(
               data-testid="task-delete-btn"
               aria-label="Usuń zadanie"
               title="Usuń zadanie"
-              className="inline-flex items-center justify-center rounded p-1 text-slate-400 transition-colors hover:bg-rose-50 hover:text-rose-600"
+              className="inline-flex items-center justify-center rounded p-1 text-slate-400 transition-colors hover:bg-rose-50 hover:text-rose-600 focus:outline-none focus:ring-2 focus:ring-rose-500"
             >
-              <Trash2 className="h-3.5 w-3.5" />
+              <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
             </button>
           </div>
         </div>

@@ -46,7 +46,7 @@ describe('kanbanCollisionDetection', () => {
 
   it('detects Monday immediately when pointer is inside Monday even at the top of the column', () => {
     const collisions = kanbanCollisionDetection({
-      active: { id: 'dragged-task', data: { current: {} }, rect: { current: { initial: null, translated: null } } } as any,
+      active: { id: 'dragged-task', data: { current: {} }, rect: { current: { initial: null, translated: null } } } as unknown as Parameters<typeof kanbanCollisionDetection>[0]['active'],
       collisionRect: { top: 120, bottom: 200, left: 320, right: 480, width: 160, height: 80 },
       droppableContainers: containers,
       droppableRects,
@@ -59,7 +59,7 @@ describe('kanbanCollisionDetection', () => {
 
   it('detects Tuesday immediately when pointer crosses into Tuesday at the top of the column', () => {
     const collisions = kanbanCollisionDetection({
-      active: { id: 'dragged-task', data: { current: {} }, rect: { current: { initial: null, translated: null } } } as any,
+      active: { id: 'dragged-task', data: { current: {} }, rect: { current: { initial: null, translated: null } } } as unknown as Parameters<typeof kanbanCollisionDetection>[0]['active'],
       collisionRect: { top: 120, bottom: 200, left: 540, right: 700, width: 160, height: 80 },
       droppableContainers: containers,
       droppableRects,
@@ -72,7 +72,7 @@ describe('kanbanCollisionDetection', () => {
 
   it('falls back to rectIntersection or closestCorners when pointer is between columns', () => {
     const collisions = kanbanCollisionDetection({
-      active: { id: 'dragged-task', data: { current: {} }, rect: { current: { initial: null, translated: null } } } as any,
+      active: { id: 'dragged-task', data: { current: {} }, rect: { current: { initial: null, translated: null } } } as unknown as Parameters<typeof kanbanCollisionDetection>[0]['active'],
       collisionRect: { top: 200, bottom: 300, left: 490, right: 530, width: 40, height: 100 },
       droppableContainers: containers,
       droppableRects,

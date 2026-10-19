@@ -58,7 +58,7 @@ async function readFileAsText(file: File): Promise<string> {
  * Główny nagłówek aplikacji z tytułem, zintegrowanym panelem akcji kopii zapasowej (Eksport / Import)
  * oraz powiadomieniami o statusie operacji.
  */
-export function Header({
+export const Header = React.memo(function Header({
   tasks = [],
   onImportTasks,
   onExport,
@@ -273,6 +273,8 @@ export function Header({
       )}
     </>
   );
-}
+});
+
+Header.displayName = 'Header';
 
 export default Header;
