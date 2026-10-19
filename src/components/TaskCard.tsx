@@ -194,6 +194,10 @@ export const TaskCard = React.memo(
       cardStateClasses += ' opacity-90 shadow-lg ring-2 ring-blue-400 rotate-1 cursor-grabbing';
     }
 
+    // Płynna obsługa interakcji dnd-kit i ekranów dotykowych
+    const cursorClass = isEditing ? '' : isDragging ? 'cursor-grabbing' : 'cursor-grab';
+    const touchClass = isEditing ? '' : 'touch-none';
+
     return (
       <div
         ref={ref}
@@ -204,7 +208,7 @@ export const TaskCard = React.memo(
         data-status={task.status}
         data-overdue={isOverdue ? 'true' : 'false'}
         aria-label={`Zadanie: ${task.title}`}
-        className={`group relative flex flex-col gap-2 rounded-lg border border-l-4 p-3 transition-all select-none ${cardStateClasses} ${className}`.trim()}
+        className={`group relative flex flex-col gap-2 rounded-lg border border-l-4 p-3 transition-all select-none ${touchClass} ${cursorClass} ${cardStateClasses} ${className}`.trim()}
         {...rest}
       >
         {/* Górny wiersz: checkbox oraz treść zadania / pole edycji inline */}
