@@ -2,6 +2,7 @@ import { render, screen, act, fireEvent } from '@testing-library/react';
 import { describe, expect, it, beforeEach, vi } from 'vitest';
 import App from './App';
 import { DEFAULT_TASKS_STORAGE_KEY } from './utils/storage';
+import * as backupUtils from './utils/backup';
 import type { Task } from './types';
 
 describe('App Layout Integration', () => {
@@ -277,6 +278,188 @@ describe('App Layout Integration', () => {
       expect(screen.getByText('Zadanie Poniedziałek Wykonane')).toBeInTheDocument();
 
       vi.useRealTimers();
+    });
+  });
+
+  describe('Backup and restore integration (Export & Import in App)', () => {
+    it('exports all application tasks to JSON when clicking the Header Export button', () => {
+      const initialTasks: Task[] = [
+        {
+          id: 'task-backlog-1',
+          title: 'Zadanie Backlog Export',
+          status: 'todo',
+          priority: 'medium',
+          day: null,
+          order: 0,
+          createdAt: '2026-10-19T10:00:00.000Z',
+        },
+        {
+          id: 'task-mon-1',
+          title: 'Zadanie Mon Export',
+          status: 'done',
+          priority: 'high',
+          day: 'mon',
+          order: 0,
+          createdAt: '2026-10-19T10:00:00.000Z',
+        },
+      ];
+
+      localStorage.setItem(DEFAULT_TASKS_STORAGE_KEY, JSON.stringify(initialTasks));
+      const exportSpy = vi
+        .spyOn(backupUtils, 'exportTasksToJson')
+        .mockReturnValue('organizer-backup-2026-10-19.json');
+
+      render(<App />);
+
+      const exportBtn = screen.getByTestId('export-backup-btn');
+      fireEvent.click(exportBtn);
+
+      expect(exportSpy).toHaveBeenCalledTimes(1);
+      expect(exportSpy).toHaveBeenCalledWith(
+        expect.arrayContaining([
+          expect.objectContaining({ id: 'task-backlog-1' }),
+          expect.objectContaining({ id: 'task-mon-1' }),
+        ])
+      );
+
+      const notification = screen.getByTestId('backup-notification');
+      expect(notification).toBeInTheDocument();
+      expect(screen.getByTestId('backup-notification-message')).toHaveTextContent(
+        'Pomyślnie wyeksportowano kopię zapasową (2 zadań).'
+      );
+    });
+
+    it('imports backup JSON, updates application columns, counters and synchronizes with localStorage after confirmation', async () => {
+      const initialTasks: Task[] = [
+        {
+          id: 'initial-task',
+          title: 'Stare zadanie do nadpisania',
+          status: 'todo',
+          priority: 'low',
+          day: null,
+          order: 0,
+          createdAt: '2026-10-19T10:00:00.000Z',
+        },
+      ];
+      localStorage.setItem(DEFAULT_TASKS_STORAGE_KEY, JSON.stringify(initialTasks));
+
+      const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true);
+
+      render(<App />);
+
+      expect(screen.getByText('Stare zadanie do nadpisania')).toBeInTheDocument();
+      expect(screen.getByTestId('backlog-count')).toHaveTextContent('1');
+      expect(screen.getByTestId('day-count-fri')).toHaveTextContent('0');
+
+      const importedTasks: Task[] = [
+        {
+          id: 'imported-backlog',
+          title: 'Nowe Zadanie w Backlogu',
+          status: 'todo',
+          priority: 'high',
+          day: null,
+          order: 0,
+          createdAt: '2026-10-19T12:00:00.000Z',
+        },
+        {
+          id: 'imported-fri',
+          title: 'Nowe Zadanie na Piątek',
+          status: 'done',
+          priority: 'medium',
+          day: 'fri',
+          order: 0,
+          createdAt: '2026-10-19T12:30:00.000Z',
+        },
+      ];
+
+      const backupFile = new File([JSON.stringify(importedTasks)], 'backup.json', {
+        type: 'application/json',
+      });
+      const fileInput = screen.getByTestId('import-file-input');
+
+      await act(async () => {
+        fireEvent.change(fileInput, { target: { files: [backupFile] } });
+      });
+
+      expect(confirmSpy).toHaveBeenCalledTimes(1);
+
+      // Nowe zadania powinny być widoczne w interfejsie
+      expect(screen.getByText('Nowe Zadanie w Backlogu')).toBeInTheDocument();
+      expect(screen.getByText('Nowe Zadanie na Piątek')).toBeInTheDocument();
+      expect(screen.queryByText('Stare zadanie do nadpisania')).toBeNull();
+
+      // Liczniki kolumn powinny zostać zaktualizowane
+      expect(screen.getByTestId('backlog-count')).toHaveTextContent('1');
+      expect(screen.getByTestId('day-count-fri')).toHaveTextContent('1');
+
+      // Pamięć localStorage powinna zostać zsynchronizowana z nowymi zadaniami
+      const storedTasksJson = localStorage.getItem(DEFAULT_TASKS_STORAGE_KEY);
+      expect(storedTasksJson).not.toBeNull();
+      const storedTasks = JSON.parse(storedTasksJson!);
+      expect(storedTasks).toHaveLength(2);
+      expect(storedTasks).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ id: 'imported-backlog', title: 'Nowe Zadanie w Backlogu' }),
+          expect.objectContaining({ id: 'imported-fri', title: 'Nowe Zadanie na Piątek' }),
+        ])
+      );
+
+      // Komunikat sukcesu powinien być widoczny
+      expect(screen.getByTestId('backup-notification')).toBeInTheDocument();
+      expect(screen.getByTestId('backup-notification-message')).toHaveTextContent(
+        'Pomyślnie zaimportowano 2 zadań.'
+      );
+    });
+
+    it('safeguards against corrupted JSON import, preserves existing tasks and prevents data loss', async () => {
+      const initialTasks: Task[] = [
+        {
+          id: 'safe-task',
+          title: 'Bezpieczne zadanie nienaruszone',
+          status: 'todo',
+          priority: 'high',
+          day: 'tue',
+          order: 0,
+          createdAt: '2026-10-19T10:00:00.000Z',
+        },
+      ];
+      localStorage.setItem(DEFAULT_TASKS_STORAGE_KEY, JSON.stringify(initialTasks));
+
+      const confirmSpy = vi.spyOn(window, 'confirm');
+
+      render(<App />);
+
+      expect(screen.getByText('Bezpieczne zadanie nienaruszone')).toBeInTheDocument();
+      expect(screen.getByTestId('day-count-tue')).toHaveTextContent('1');
+
+      const corruptedFile = new File(['{{ invalid json syntax !!!'], 'corrupted.json', {
+        type: 'application/json',
+      });
+      const fileInput = screen.getByTestId('import-file-input');
+
+      await act(async () => {
+        fireEvent.change(fileInput, { target: { files: [corruptedFile] } });
+      });
+
+      // Nie wyświetlono prośby o potwierdzenie dla uszkodzonego pliku
+      expect(confirmSpy).not.toHaveBeenCalled();
+
+      // Komunikat błędu
+      expect(screen.getByTestId('backup-notification')).toBeInTheDocument();
+      expect(screen.getByTestId('backup-notification-message')).toHaveTextContent(
+        /Błąd importu: Nieprawidłowy format JSON/i
+      );
+
+      // Dotychczasowe zadanie nadal istnieje w widoku
+      expect(screen.getByText('Bezpieczne zadanie nienaruszone')).toBeInTheDocument();
+      expect(screen.getByTestId('day-count-tue')).toHaveTextContent('1');
+
+      // LocalStorage pozostało w niezmienionym stanie
+      const storedTasksJson = localStorage.getItem(DEFAULT_TASKS_STORAGE_KEY);
+      expect(storedTasksJson).not.toBeNull();
+      const storedTasks = JSON.parse(storedTasksJson!);
+      expect(storedTasks).toHaveLength(1);
+      expect(storedTasks[0].title).toBe('Bezpieczne zadanie nienaruszone');
     });
   });
 });
