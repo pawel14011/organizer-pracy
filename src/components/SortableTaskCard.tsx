@@ -38,10 +38,13 @@ export function SortableTaskCard({
     },
   });
 
+  const isDragActive = isDragging || Boolean(props.isDragging);
+
   const sortableStyle: React.CSSProperties = {
     transform: CSS.Translate.toString(transform),
     transition,
-    zIndex: isDragging ? 50 : undefined,
+    opacity: isDragging ? 0.35 : undefined,
+    zIndex: isDragActive ? 50 : undefined,
     ...userStyle,
   };
 
@@ -50,7 +53,7 @@ export function SortableTaskCard({
       ref={setNodeRef}
       task={task}
       style={sortableStyle}
-      isDragging={isDragging || props.isDragging}
+      isDragging={isDragActive}
       className={className}
       data-sortable="true"
       {...attributes}

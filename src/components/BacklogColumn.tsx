@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { useDroppable } from '@dnd-kit/core';
+import { useDroppable, useDndContext } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import type { Task } from '../types';
 import { BACKLOG_DROPPABLE_ID } from '../constants';
@@ -10,6 +10,8 @@ export interface BacklogColumnProps {
   tasks?: Task[];
   /** Opcjonalna bezpośrednia liczba zadań (domyślnie tasks.length) */
   taskCount?: number;
+  /** Opcjonalne jawne wymuszenie stanu najechania (np. w testach) */
+  isOver?: boolean;
   /** Zawartość kafelków zadań (lub formularza) renderowana w kolumnie */
   children?: React.ReactNode;
   /** Opcjonalny element akcji w nagłówku (np. formularz szybkiego dodawania zadania AddTaskForm) */
@@ -28,6 +30,7 @@ export interface BacklogColumnProps {
 export function BacklogColumn({
   tasks,
   taskCount,
+  isOver: isOverProp,
   children,
   headerAction,
   onAddTask,
@@ -36,13 +39,26 @@ export function BacklogColumn({
   const count = taskCount ?? tasks?.length ?? 0;
   const actionContent = headerAction !== undefined ? headerAction : onAddTask ? <AddTaskForm onAddTask={onAddTask} /> : null;
 
-  const { setNodeRef, isOver } = useDroppable({
+  const { setNodeRef, isOver: isDroppableOver } = useDroppable({
     id: BACKLOG_DROPPABLE_ID,
     data: {
       type: 'Column',
       day: null,
     },
   });
+
+  const dndContext = useDndContext();
+  const currentOverId = dndContext.over?.id ? String(dndContext.over.id) : null;
+
+  // Panel Backlogu jest podświetlany, gdy wskaźnik znajduje się nad jego kontenerem droppable
+  // LUB nad dowolnym kafelkiem zadania znajdującym się w Backlogu
+  const isTargetOver =
+    isOverProp !== undefined
+      ? isOverProp
+      : isDroppableOver ||
+        (currentOverId !== null &&
+          (currentOverId === BACKLOG_DROPPABLE_ID ||
+            (tasks ? tasks.some((t) => t.id === currentOverId) : false)));
 
   const taskIds = useMemo(() => {
     if (tasks && tasks.length > 0) {
@@ -62,14 +78,23 @@ export function BacklogColumn({
     return ids;
   }, [tasks, children]);
 
+  const asideClasses = isTargetOver
+    ? 'border-blue-400 bg-blue-50/90 ring-2 ring-blue-500 shadow-md'
+    : 'border-slate-200 bg-slate-50/80 shadow-sm';
+
+  const headerBgClasses = isTargetOver
+    ? 'border-b border-blue-300 bg-blue-100/70'
+    : 'border-b border-slate-200/80';
+
   return (
     <aside
       data-testid="column-backlog"
+      data-column-over={isTargetOver ? 'true' : 'false'}
       aria-label="Backlog"
-      className={`flex w-72 lg:w-80 shrink-0 flex-col rounded-xl border border-slate-200 bg-slate-50/80 shadow-sm ${className}`.trim()}
+      className={`flex w-72 lg:w-80 shrink-0 flex-col rounded-xl border transition-all duration-150 ${asideClasses} ${className}`.trim()}
     >
       {/* Nagłówek panelu Backlog */}
-      <div className="border-b border-slate-200/80 p-4">
+      <div className={`p-4 transition-colors ${headerBgClasses}`}>
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <h2 className="text-sm font-bold uppercase tracking-wider text-slate-800">
@@ -96,9 +121,9 @@ export function BacklogColumn({
         ref={setNodeRef}
         id={BACKLOG_DROPPABLE_ID}
         data-testid="droppable-backlog"
-        data-is-over={isOver ? 'true' : 'false'}
+        data-is-over={isTargetOver ? 'true' : 'false'}
         className={`flex flex-1 flex-col gap-2 overflow-y-auto p-3 min-h-[160px] rounded-b-xl transition-colors ${
-          isOver ? 'bg-blue-100/40 ring-2 ring-blue-400 ring-inset' : ''
+          isTargetOver ? 'bg-blue-100/40 ring-2 ring-blue-400 ring-inset' : ''
         }`}
       >
         <SortableContext items={taskIds} strategy={verticalListSortingStrategy}>
@@ -107,10 +132,18 @@ export function BacklogColumn({
           ) : (
             <div
               data-testid="backlog-empty-state"
-              className="flex flex-1 flex-col items-center justify-center gap-1 rounded-lg border border-dashed border-slate-200 p-6 text-center text-xs text-slate-400"
+              className={`flex flex-1 flex-col items-center justify-center gap-1 rounded-lg border border-dashed p-6 text-center text-xs transition-colors ${
+                isTargetOver
+                  ? 'border-blue-400 bg-blue-50/60 text-blue-600 font-medium'
+                  : 'border-slate-200 text-slate-400'
+              }`}
             >
-              <span className="font-medium text-slate-500">Brak zadań w Backlogu</span>
-              <span className="text-[11px] text-slate-400">Wpisz zadanie powyżej</span>
+              <span className="font-medium text-slate-500">
+                {isTargetOver ? 'Upuść tutaj' : 'Brak zadań w Backlogu'}
+              </span>
+              <span className="text-[11px] text-slate-400">
+                {isTargetOver ? 'Zwolnij przycisk myszy' : 'Wpisz zadanie powyżej'}
+              </span>
             </div>
           )}
         </SortableContext>

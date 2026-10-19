@@ -1,7 +1,8 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   DndContext,
   closestCorners,
+  DragOverlay,
   type DragStartEvent,
   type DragOverEvent,
   type DragEndEvent,
@@ -14,6 +15,7 @@ import {
   WeekGrid,
   DayColumn,
   SortableTaskCard,
+  TaskCard,
 } from './components';
 import { WEEKDAYS, BACKLOG_DROPPABLE_ID } from './constants';
 import { isToday, isPastDay } from './utils';
@@ -62,6 +64,12 @@ export function App({
 
   // Identyfikator aktualnie przeciąganego zadania
   const [activeTaskId, setActiveTaskId] = useState<string | null>(null);
+
+  // Aktywne zadanie przeciągane w czasie rzeczywistym (wyświetlane w DragOverlay)
+  const activeTask = useMemo(
+    () => (activeTaskId ? tasks.find((task) => task.id === activeTaskId) ?? null : null),
+    [activeTaskId, tasks]
+  );
 
   // Skonfigurowane sensory: PointerSensor (distance: 8px) oraz KeyboardSensor (sortableKeyboardCoordinates)
   const sensors = useDndSensors();
@@ -236,6 +244,23 @@ export function App({
           </WeekGrid>
         </main>
       </div>
+
+      {/* Pływający podgląd przeciąganego kafelka wyświetlany poza kontenerami z overflow */}
+      <DragOverlay
+        dropAnimation={{
+          duration: 180,
+          easing: 'cubic-bezier(0.18, 0.67, 0.6, 1.22)',
+        }}
+      >
+        {activeTask ? (
+          <TaskCard
+            task={activeTask}
+            isDragging={true}
+            data-testid="drag-overlay-card"
+            className="shadow-2xl ring-2 ring-blue-500 rotate-2 scale-105 cursor-grabbing pointer-events-none"
+          />
+        ) : null}
+      </DragOverlay>
     </DndContext>
   );
 }
