@@ -1,21 +1,32 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   DndContext,
-  closestCorners,
+  DragOverlay,
   type DragStartEvent,
   type DragOverEvent,
   type DragEndEvent,
   type DragCancelEvent,
+  type CollisionDetection,
 } from '@dnd-kit/core';
 import { useTasks, useDndSensors } from './hooks';
-import { Header, BacklogColumn, WeekGrid, DayColumn, TaskCard } from './components';
-import { WEEKDAYS } from './constants';
-import { isToday, isPastDay } from './utils';
+import {
+  Header,
+  BacklogColumn,
+  WeekGrid,
+  DayColumn,
+  SortableTaskCard,
+  TaskCard,
+} from './components';
+import { WEEKDAYS, BACKLOG_DROPPABLE_ID } from './constants';
+import { isToday, isPastDay, kanbanCollisionDetection } from './utils';
+import type { DayOfWeek, Weekday } from './types';
 
 /**
  * Właściwości komponentu App (wspierające rozszerzalność oraz testy integracyjne dnd-kit).
  */
 export interface AppProps {
+  /** Opcjonalna strategia detekcji kolizji (domyślnie kanbanCollisionDetection) */
+  collisionDetection?: CollisionDetection;
   /** Opcjonalny callback wywoływany w momencie rozpoczęcia przeciągania (onDragStart) */
   onDragStart?: (event: DragStartEvent) => void;
   /** Opcjonalny callback wywoływany podczas przesuwania elementu nad kontenerem (onDragOver) */
@@ -32,12 +43,14 @@ export interface AppProps {
  * oraz nadrzędny DndContext zarządzający gestami przeciągania kafelków zadań.
  */
 export function App({
+  collisionDetection: collisionDetectionProp,
   onDragStart: onDragStartProp,
   onDragOver: onDragOverProp,
   onDragEnd: onDragEndProp,
   onDragCancel: onDragCancelProp,
 }: AppProps = {}) {
   const {
+    tasks,
     backlogTasks,
     getTasksByDay,
     addTask,
@@ -45,6 +58,7 @@ export function App({
     cycleTaskPriority,
     deleteTask,
     updateTask,
+    moveTask,
     returnToBacklog,
   } = useTasks();
 
@@ -53,6 +67,12 @@ export function App({
 
   // Identyfikator aktualnie przeciąganego zadania
   const [activeTaskId, setActiveTaskId] = useState<string | null>(null);
+
+  // Aktywne zadanie przeciągane w czasie rzeczywistym (wyświetlane w DragOverlay)
+  const activeTask = useMemo(
+    () => (activeTaskId ? tasks.find((task) => task.id === activeTaskId) ?? null : null),
+    [activeTaskId, tasks]
+  );
 
   // Skonfigurowane sensory: PointerSensor (distance: 8px) oraz KeyboardSensor (sortableKeyboardCoordinates)
   const sensors = useDndSensors();
@@ -81,7 +101,7 @@ export function App({
     [onDragStartProp]
   );
 
-  // Obsługa zdarzenia przesuwania elementu nad kontenerem (pod Zadanie 4.2 i 4.3)
+  // Obsługa zdarzenia przesuwania elementu nad kontenerem
   const handleDragOver = useCallback(
     (event: DragOverEvent) => {
       onDragOverProp?.(event);
@@ -89,13 +109,57 @@ export function App({
     [onDragOverProp]
   );
 
-  // Obsługa zakończenia przeciągania (pod Zadanie 4.3)
+  // Obsługa zakończenia przeciągania: wyznaczenie docelowego dnia i indeksu, oraz wywołanie moveTask
   const handleDragEnd = useCallback(
     (event: DragEndEvent) => {
       setActiveTaskId(null);
       onDragEndProp?.(event);
+
+      const { active, over } = event;
+      if (!over) {
+        return;
+      }
+
+      const activeId = String(active.id);
+      const overId = String(over.id);
+
+      if (activeId === overId) {
+        return;
+      }
+
+      const activeTask = tasks.find((task) => task.id === activeId);
+      if (!activeTask) {
+        return;
+      }
+
+      let targetDay: DayOfWeek | undefined;
+      let targetIndex = 0;
+
+      if (overId === BACKLOG_DROPPABLE_ID) {
+        targetDay = null;
+        targetIndex = backlogTasks.length;
+      } else if (WEEKDAYS.includes(overId as Weekday)) {
+        targetDay = overId as Weekday;
+        targetIndex = getTasksByDay(targetDay).length;
+      } else {
+        // overId wskazuje na inny kafelek zadania
+        const overTask = tasks.find((task) => task.id === overId);
+        if (overTask) {
+          targetDay = overTask.day;
+          const targetColumnTasks =
+            targetDay === null ? backlogTasks : getTasksByDay(targetDay);
+          const foundIndex = targetColumnTasks.findIndex(
+            (task) => task.id === overId
+          );
+          targetIndex = foundIndex >= 0 ? foundIndex : targetColumnTasks.length;
+        }
+      }
+
+      if (targetDay !== undefined) {
+        moveTask(activeId, targetDay, targetIndex);
+      }
     },
-    [onDragEndProp]
+    [tasks, backlogTasks, getTasksByDay, moveTask, onDragEndProp]
   );
 
   // Obsługa anulowania przeciągania (np. klawisz Escape)
@@ -110,7 +174,7 @@ export function App({
   return (
     <DndContext
       sensors={sensors}
-      collisionDetection={closestCorners}
+      collisionDetection={collisionDetectionProp ?? kanbanCollisionDetection}
       onDragStart={handleDragStart}
       onDragOver={handleDragOver}
       onDragEnd={handleDragEnd}
@@ -133,7 +197,7 @@ export function App({
           >
             {backlogTasks.length > 0
               ? backlogTasks.map((task) => (
-                  <TaskCard
+                  <SortableTaskCard
                     key={task.id}
                     task={task}
                     isDragging={activeTaskId === task.id}
@@ -164,7 +228,7 @@ export function App({
                 >
                   {dayTasks.length > 0
                     ? dayTasks.map((task) => (
-                        <TaskCard
+                        <SortableTaskCard
                           key={task.id}
                           task={task}
                           isDragging={activeTaskId === task.id}
@@ -183,6 +247,23 @@ export function App({
           </WeekGrid>
         </main>
       </div>
+
+      {/* Pływający podgląd przeciąganego kafelka wyświetlany poza kontenerami z overflow */}
+      <DragOverlay
+        dropAnimation={{
+          duration: 180,
+          easing: 'cubic-bezier(0.18, 0.67, 0.6, 1.22)',
+        }}
+      >
+        {activeTask ? (
+          <TaskCard
+            task={activeTask}
+            isDragging={true}
+            data-testid="drag-overlay-card"
+            className="shadow-2xl ring-2 ring-blue-500 rotate-2 scale-105 cursor-grabbing pointer-events-none"
+          />
+        ) : null}
+      </DragOverlay>
     </DndContext>
   );
 }

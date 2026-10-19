@@ -84,4 +84,13 @@ describe('DayColumn component', () => {
 
     expect(screen.getByTestId('day-action')).toBeInTheDocument();
   });
+
+  it('renders droppable container with data-is-over attribute and min height', () => {
+    render(<DayColumn day="wed" />);
+
+    const droppable = screen.getByTestId('droppable-wed');
+    expect(droppable).toBeInTheDocument();
+    expect(droppable).toHaveAttribute('data-is-over', 'false');
+    expect(droppable).toHaveClass('min-h-[160px]');
+  });
 });

@@ -1,7 +1,6 @@
 import { render, screen, act } from '@testing-library/react';
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import {
-  closestCorners,
   type DragStartEvent,
   type DragEndEvent,
   type DragOverEvent,
@@ -10,6 +9,7 @@ import {
 } from '@dnd-kit/core';
 import App from './App';
 import { DEFAULT_TASKS_STORAGE_KEY } from './utils/storage';
+import { kanbanCollisionDetection } from './utils';
 import type { Task } from './types';
 
 // Przechwytywanie właściwości przekazanych do DndContext w celu precyzyjnej weryfikacji konfiguracji
@@ -43,11 +43,11 @@ describe('App DndContext and Sensor Configuration Integration', () => {
     vi.restoreAllMocks();
   });
 
-  it('configures DndContext with closestCorners collision detection and 2 sensors', () => {
+  it('configures DndContext with kanbanCollisionDetection and 2 sensors', () => {
     render(<App />);
 
     expect(capturedDndProps).toBeDefined();
-    expect(capturedDndProps.collisionDetection).toBe(closestCorners);
+    expect(capturedDndProps.collisionDetection).toBe(kanbanCollisionDetection);
     expect(capturedDndProps.sensors).toBeDefined();
     expect(capturedDndProps.sensors).toHaveLength(2);
     expect(typeof capturedDndProps.onDragStart).toBe('function');
@@ -167,5 +167,207 @@ describe('App DndContext and Sensor Configuration Integration', () => {
 
     expect(onDragOverCallback).toHaveBeenCalledTimes(1);
     expect(onDragOverCallback).toHaveBeenCalledWith(fakeOverEvent);
+  });
+
+  describe('Drag and Drop Task Reordering and Column Moving', () => {
+    it('moves a task from Backlog to an empty Day column when dropped onto the column droppable', () => {
+      const task: Task = {
+        id: 'backlog-to-mon',
+        title: 'Zadanie z backlogu do poniedziałku',
+        status: 'todo',
+        priority: 'medium',
+        day: null,
+        order: 0,
+        createdAt: '2026-10-19T10:00:00.000Z',
+      };
+      localStorage.setItem(DEFAULT_TASKS_STORAGE_KEY, JSON.stringify([task]));
+
+      render(<App />);
+
+      expect(screen.getByTestId('backlog-count')).toHaveTextContent('1');
+      expect(screen.getByTestId('day-count-mon')).toHaveTextContent('0');
+
+      act(() => {
+        capturedDndProps.onDragEnd?.({
+          active: { id: task.id },
+          over: { id: 'mon' },
+        } as unknown as DragEndEvent);
+      });
+
+      expect(screen.getByTestId('backlog-count')).toHaveTextContent('0');
+      expect(screen.getByTestId('day-count-mon')).toHaveTextContent('1');
+
+      const savedTasks: Task[] = JSON.parse(
+        localStorage.getItem(DEFAULT_TASKS_STORAGE_KEY) || '[]'
+      );
+      expect(savedTasks).toHaveLength(1);
+      expect(savedTasks[0].day).toBe('mon');
+      expect(savedTasks[0].order).toBe(0);
+    });
+
+    it('moves a task from a Day column back to Backlog when dropped onto droppable-backlog', () => {
+      const task: Task = {
+        id: 'mon-to-backlog',
+        title: 'Cofnij do backlogu',
+        status: 'todo',
+        priority: 'high',
+        day: 'mon',
+        order: 0,
+        createdAt: '2026-10-19T10:00:00.000Z',
+      };
+      localStorage.setItem(DEFAULT_TASKS_STORAGE_KEY, JSON.stringify([task]));
+
+      render(<App />);
+
+      expect(screen.getByTestId('day-count-mon')).toHaveTextContent('1');
+      expect(screen.getByTestId('backlog-count')).toHaveTextContent('0');
+
+      act(() => {
+        capturedDndProps.onDragEnd?.({
+          active: { id: task.id },
+          over: { id: 'backlog' },
+        } as unknown as DragEndEvent);
+      });
+
+      expect(screen.getByTestId('day-count-mon')).toHaveTextContent('0');
+      expect(screen.getByTestId('backlog-count')).toHaveTextContent('1');
+
+      const savedTasks: Task[] = JSON.parse(
+        localStorage.getItem(DEFAULT_TASKS_STORAGE_KEY) || '[]'
+      );
+      expect(savedTasks[0].day).toBeNull();
+      expect(savedTasks[0].order).toBe(0);
+    });
+
+    it('reorders tasks within the same column when dropped over another task', () => {
+      const task1: Task = {
+        id: 'task-1',
+        title: 'Pierwsze zadanie',
+        status: 'todo',
+        priority: 'low',
+        day: 'tue',
+        order: 0,
+        createdAt: '2026-10-19T10:00:00.000Z',
+      };
+      const task2: Task = {
+        id: 'task-2',
+        title: 'Drugie zadanie',
+        status: 'todo',
+        priority: 'high',
+        day: 'tue',
+        order: 1,
+        createdAt: '2026-10-19T10:05:00.000Z',
+      };
+      localStorage.setItem(DEFAULT_TASKS_STORAGE_KEY, JSON.stringify([task1, task2]));
+
+      render(<App />);
+
+      const columnTue = screen.getByTestId('column-day-tue');
+      expect(columnTue).toBeInTheDocument();
+
+      // Przesuń drugie zadanie przed pierwsze
+      act(() => {
+        capturedDndProps.onDragEnd?.({
+          active: { id: task2.id },
+          over: { id: task1.id },
+        } as unknown as DragEndEvent);
+      });
+
+      const savedTasks: Task[] = JSON.parse(
+        localStorage.getItem(DEFAULT_TASKS_STORAGE_KEY) || '[]'
+      );
+      const updatedTask2 = savedTasks.find((t) => t.id === 'task-2');
+      const updatedTask1 = savedTasks.find((t) => t.id === 'task-1');
+
+      expect(updatedTask2?.order).toBe(0);
+      expect(updatedTask1?.order).toBe(1);
+    });
+
+    it('moves a task between two different days by dropping over an existing task', () => {
+      const taskMon: Task = {
+        id: 'task-mon',
+        title: 'Zadanie z poniedziałku',
+        status: 'todo',
+        priority: 'medium',
+        day: 'mon',
+        order: 0,
+        createdAt: '2026-10-19T10:00:00.000Z',
+      };
+      const taskFri: Task = {
+        id: 'task-fri',
+        title: 'Zadanie z piątku',
+        status: 'todo',
+        priority: 'high',
+        day: 'fri',
+        order: 0,
+        createdAt: '2026-10-19T10:05:00.000Z',
+      };
+      localStorage.setItem(DEFAULT_TASKS_STORAGE_KEY, JSON.stringify([taskMon, taskFri]));
+
+      render(<App />);
+
+      expect(screen.getByTestId('day-count-mon')).toHaveTextContent('1');
+      expect(screen.getByTestId('day-count-fri')).toHaveTextContent('1');
+
+      act(() => {
+        capturedDndProps.onDragEnd?.({
+          active: { id: taskMon.id },
+          over: { id: taskFri.id },
+        } as unknown as DragEndEvent);
+      });
+
+      expect(screen.getByTestId('day-count-mon')).toHaveTextContent('0');
+      expect(screen.getByTestId('day-count-fri')).toHaveTextContent('2');
+
+      const savedTasks: Task[] = JSON.parse(
+        localStorage.getItem(DEFAULT_TASKS_STORAGE_KEY) || '[]'
+      );
+      const movedTask = savedTasks.find((t) => t.id === 'task-mon');
+      expect(movedTask?.day).toBe('fri');
+      expect(movedTask?.order).toBe(0);
+    });
+
+    it('does not alter tasks if dropped on itself or outside any droppable target', () => {
+      const task: Task = {
+        id: 'task-unchanged',
+        title: 'Niezmienne zadanie',
+        status: 'todo',
+        priority: 'low',
+        day: 'wed',
+        order: 0,
+        createdAt: '2026-10-19T10:00:00.000Z',
+      };
+      localStorage.setItem(DEFAULT_TASKS_STORAGE_KEY, JSON.stringify([task]));
+
+      render(<App />);
+
+      // Upuszczenie na samego siebie
+      act(() => {
+        capturedDndProps.onDragEnd?.({
+          active: { id: task.id },
+          over: { id: task.id },
+        } as unknown as DragEndEvent);
+      });
+
+      let savedTasks: Task[] = JSON.parse(
+        localStorage.getItem(DEFAULT_TASKS_STORAGE_KEY) || '[]'
+      );
+      expect(savedTasks[0].day).toBe('wed');
+      expect(savedTasks[0].order).toBe(0);
+
+      // Upuszczenie w próżnię (over: null)
+      act(() => {
+        capturedDndProps.onDragEnd?.({
+          active: { id: task.id },
+          over: null,
+        } as unknown as DragEndEvent);
+      });
+
+      savedTasks = JSON.parse(
+        localStorage.getItem(DEFAULT_TASKS_STORAGE_KEY) || '[]'
+      );
+      expect(savedTasks[0].day).toBe('wed');
+      expect(savedTasks[0].order).toBe(0);
+    });
   });
 });
