@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useTasks } from './hooks';
-import { Header, BacklogColumn, WeekGrid, DayColumn } from './components';
+import { Header, BacklogColumn, WeekGrid, DayColumn, TaskCard } from './components';
 import { WEEKDAYS } from './constants';
 import { isToday, isPastDay } from './utils';
 
@@ -9,7 +9,15 @@ import { isToday, isPastDay } from './utils';
  * Łączy szkielet nawigacji (Header), panel Backlogu oraz 7 kolumn stałego tygodnia.
  */
 export function App() {
-  const { backlogTasks, getTasksByDay } = useTasks();
+  const {
+    backlogTasks,
+    getTasksByDay,
+    toggleTaskStatus,
+    cycleTaskPriority,
+    deleteTask,
+    updateTask,
+    returnToBacklog,
+  } = useTasks();
 
   // Dynamiczny stan daty referencyjnej do obsługi przejścia północy bez przeładowania strony
   const [currentDate, setCurrentDate] = useState<Date>(() => new Date());
@@ -39,7 +47,21 @@ export function App() {
         <BacklogColumn
           tasks={backlogTasks}
           taskCount={backlogTasks.length}
-        />
+        >
+          {backlogTasks.length > 0
+            ? backlogTasks.map((task) => (
+                <TaskCard
+                  key={task.id}
+                  task={task}
+                  onToggleStatus={toggleTaskStatus}
+                  onCyclePriority={cycleTaskPriority}
+                  onDelete={deleteTask}
+                  onUpdateTitle={(id, title) => updateTask(id, { title })}
+                  onReturnToBacklog={returnToBacklog}
+                />
+              ))
+            : null}
+        </BacklogColumn>
 
         <WeekGrid>
           {WEEKDAYS.map((day) => {
@@ -55,7 +77,22 @@ export function App() {
                 taskCount={dayTasks.length}
                 isToday={isCurrentDay}
                 isPast={isPast}
-              />
+              >
+                {dayTasks.length > 0
+                  ? dayTasks.map((task) => (
+                      <TaskCard
+                        key={task.id}
+                        task={task}
+                        onToggleStatus={toggleTaskStatus}
+                        onCyclePriority={cycleTaskPriority}
+                        onDelete={deleteTask}
+                        onUpdateTitle={(id, title) => updateTask(id, { title })}
+                        onReturnToBacklog={returnToBacklog}
+                        isOverdue={isPast && task.status !== 'done'}
+                      />
+                    ))
+                  : null}
+              </DayColumn>
             );
           })}
         </WeekGrid>
