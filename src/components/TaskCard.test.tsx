@@ -300,6 +300,65 @@ describe('TaskCard component', () => {
       fireEvent.click(screen.getByTestId('task-edit-input'));
       expect(containerClick).not.toHaveBeenCalled();
     });
+
+    it('stops pointerDown and mouseDown propagation to prevent accidental DnD activation', () => {
+      const containerPointerDown = vi.fn();
+      const containerMouseDown = vi.fn();
+
+      render(
+        <div
+          onPointerDown={containerPointerDown}
+          onMouseDown={containerMouseDown}
+          data-testid="outer-container"
+        >
+          <TaskCard
+            task={baseTask}
+            isOverdue={true}
+            onToggleStatus={() => {}}
+            onCyclePriority={() => {}}
+            onDelete={() => {}}
+            onReturnToBacklog={() => {}}
+          />
+        </div>
+      );
+
+      // Checkbox
+      fireEvent.pointerDown(screen.getByTestId('task-checkbox'));
+      fireEvent.mouseDown(screen.getByTestId('task-checkbox'));
+      expect(containerPointerDown).not.toHaveBeenCalled();
+      expect(containerMouseDown).not.toHaveBeenCalled();
+
+      // Priority button
+      fireEvent.pointerDown(screen.getByTestId('task-priority-btn'));
+      fireEvent.mouseDown(screen.getByTestId('task-priority-btn'));
+      expect(containerPointerDown).not.toHaveBeenCalled();
+      expect(containerMouseDown).not.toHaveBeenCalled();
+
+      // Delete button
+      fireEvent.pointerDown(screen.getByTestId('task-delete-btn'));
+      fireEvent.mouseDown(screen.getByTestId('task-delete-btn'));
+      expect(containerPointerDown).not.toHaveBeenCalled();
+      expect(containerMouseDown).not.toHaveBeenCalled();
+
+      // Return button
+      fireEvent.pointerDown(screen.getByTestId('task-return-btn'));
+      fireEvent.mouseDown(screen.getByTestId('task-return-btn'));
+      expect(containerPointerDown).not.toHaveBeenCalled();
+      expect(containerMouseDown).not.toHaveBeenCalled();
+
+      // Edit button
+      fireEvent.pointerDown(screen.getByTestId('task-edit-btn'));
+      fireEvent.mouseDown(screen.getByTestId('task-edit-btn'));
+      expect(containerPointerDown).not.toHaveBeenCalled();
+      expect(containerMouseDown).not.toHaveBeenCalled();
+    });
+
+    it('renders touch-none and cursor-grab styles by default for DnD touch/mouse support', () => {
+      render(<TaskCard task={baseTask} />);
+      const card = screen.getByTestId('task-card');
+      expect(card).toHaveClass('touch-none');
+      expect(card).toHaveClass('cursor-grab');
+    });
   });
 
   describe('Accessibility (a11y)', () => {
