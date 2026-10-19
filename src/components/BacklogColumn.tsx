@@ -27,7 +27,7 @@ export interface BacklogColumnProps {
  * Integruje się z @dnd-kit jako kontener zrzutu (Droppable) o identyfikatorze 'backlog'
  * oraz SortableContext o pionowej strategii sortowania (verticalListSortingStrategy).
  */
-export function BacklogColumn({
+export const BacklogColumn = React.memo(function BacklogColumn({
   tasks,
   taskCount,
   isOver: isOverProp,
@@ -150,6 +150,8 @@ export function BacklogColumn({
       </div>
     </aside>
   );
-}
+});
+
+BacklogColumn.displayName = 'BacklogColumn';
 
 export default BacklogColumn;

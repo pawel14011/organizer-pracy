@@ -35,7 +35,7 @@ export interface DayColumnProps {
  * Integruje się z @dnd-kit jako kontener zrzutu (Droppable) o identyfikatorze odpowiadającym
  * dniowi tygodnia ('mon'..'sun') oraz SortableContext o pionowej strategii sortowania (verticalListSortingStrategy).
  */
-export function DayColumn({
+export const DayColumn = React.memo(function DayColumn({
   day,
   tasks,
   taskCount,
@@ -169,7 +169,7 @@ export function DayColumn({
             title="Przenieś zaległe zadania do Backlogu"
             className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-lg border border-amber-300 bg-amber-50 px-2 py-1 text-xs font-semibold text-amber-800 transition-colors hover:bg-amber-100 hover:border-amber-400 focus:outline-none focus:ring-2 focus:ring-amber-500 cursor-pointer"
           >
-            <RotateCcw className="h-3.5 w-3.5 shrink-0 text-amber-700" />
+            <RotateCcw className="h-3.5 w-3.5 shrink-0 text-amber-700" aria-hidden="true" />
             <span className="truncate">Przenieś zaległe do backlogu</span>
           </button>
         ) : null}
@@ -210,6 +210,8 @@ export function DayColumn({
       </div>
     </div>
   );
-}
+});
+
+DayColumn.displayName = 'DayColumn';
 
 export default DayColumn;

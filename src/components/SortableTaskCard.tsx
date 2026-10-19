@@ -14,7 +14,7 @@ export interface SortableTaskCardProps extends TaskCardProps {
  * Opakowuje prezentacyjny TaskCard w hook useSortable, zapewniając obsługę
  * transformacji przemieszczenia, nasłuchiwaczy zdarzeń przeciągania oraz atrybutów dostępności.
  */
-export function SortableTaskCard({
+export const SortableTaskCard = React.memo(function SortableTaskCard({
   task,
   disabled = false,
   style: userStyle,
@@ -61,6 +61,8 @@ export function SortableTaskCard({
       {...props}
     />
   );
-}
+});
+
+SortableTaskCard.displayName = 'SortableTaskCard';
 
 export default SortableTaskCard;

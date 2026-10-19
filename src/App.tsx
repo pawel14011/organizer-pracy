@@ -210,6 +210,14 @@ export function App({
     [onDragCancelProp]
   );
 
+  // Stabilny callback aktualizacji tytułu zadania zapobiegający niepotrzebnym re-renderom memoizowanych kafelków
+  const handleUpdateTitle = useCallback(
+    (id: string, title: string) => {
+      updateTask(id, { title });
+    },
+    [updateTask]
+  );
+
   return (
     <DndContext
       sensors={sensors}
@@ -231,7 +239,10 @@ export function App({
         />
 
         {/* Główna przestrzeń robocza: Backlog po lewej, Stały Tydzień po prawej */}
-        <main className="flex flex-1 min-h-0 gap-4 p-4 lg:p-6 overflow-hidden">
+        <main
+          aria-label="Tablica zadań"
+          className="flex flex-1 min-h-0 gap-4 p-4 lg:p-6 overflow-hidden"
+        >
           <BacklogColumn
             tasks={backlogTasks}
             taskCount={backlogTasks.length}
@@ -246,7 +257,7 @@ export function App({
                     onToggleStatus={toggleTaskStatus}
                     onCyclePriority={cycleTaskPriority}
                     onDelete={deleteTask}
-                    onUpdateTitle={(id, title) => updateTask(id, { title })}
+                    onUpdateTitle={handleUpdateTitle}
                     onReturnToBacklog={returnToBacklog}
                   />
                 ))
@@ -278,7 +289,7 @@ export function App({
                           onToggleStatus={toggleTaskStatus}
                           onCyclePriority={cycleTaskPriority}
                           onDelete={deleteTask}
-                          onUpdateTitle={(id, title) => updateTask(id, { title })}
+                          onUpdateTitle={handleUpdateTitle}
                           onReturnToBacklog={returnToBacklog}
                           isOverdue={isPast && task.status !== 'done'}
                         />

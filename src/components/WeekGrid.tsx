@@ -11,7 +11,7 @@ export interface WeekGridProps {
  * Prawy panel aplikacji zawierający 7 kolumn stałego tygodnia.
  * Obsługuje horyzontalne przewijanie (overflow-x-auto) przy mniejszych szerokościach ekranu.
  */
-export function WeekGrid({ children, className = '' }: WeekGridProps) {
+export const WeekGrid = React.memo(function WeekGrid({ children, className = '' }: WeekGridProps) {
   return (
     <section
       data-testid="week-grid"
@@ -25,6 +25,8 @@ export function WeekGrid({ children, className = '' }: WeekGridProps) {
       </div>
     </section>
   );
-}
+});
+
+WeekGrid.displayName = 'WeekGrid';
 
 export default WeekGrid;

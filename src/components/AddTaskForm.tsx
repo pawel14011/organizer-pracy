@@ -24,7 +24,7 @@ export interface AddTaskFormProps {
  * - Ochrona przed wielokrotnym dodaniem przy szybkich powtórzeniach (natychmiastowe czyszczenie stanu).
  * - Zachowanie fokusu w polu po zatwierdzeniu zadania.
  */
-export function AddTaskForm({
+export const AddTaskForm = React.memo(function AddTaskForm({
   onAddTask,
   placeholder = 'Wpisz treść zadania i naciśnij Enter...',
   className = '',
@@ -96,12 +96,14 @@ export function AddTaskForm({
         disabled={isSubmitDisabled}
         aria-label="Dodaj zadanie"
         title="Dodaj zadanie (Enter)"
-        className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-800 focus:outline-none focus:ring-1 focus:ring-blue-400 disabled:cursor-not-allowed disabled:opacity-40"
+        className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:cursor-not-allowed disabled:opacity-40"
       >
         <Plus className="h-4 w-4" aria-hidden="true" />
       </button>
     </form>
   );
-}
+});
+
+AddTaskForm.displayName = 'AddTaskForm';
 
 export default AddTaskForm;
