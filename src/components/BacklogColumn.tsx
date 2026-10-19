@@ -89,10 +89,11 @@ export const BacklogColumn = React.memo(function BacklogColumn({
   return (
     <aside
       ref={setNodeRef}
+      id="column-container-backlog"
       data-testid="column-backlog"
       data-column-over={isTargetOver ? 'true' : 'false'}
       aria-label="Backlog"
-      className={`flex w-72 lg:w-80 shrink-0 flex-col rounded-xl border transition-all duration-150 ${asideClasses} ${className}`.trim()}
+      className={`flex w-[86vw] max-w-[340px] sm:w-80 lg:w-80 shrink-0 snap-center flex-col rounded-xl border transition-all duration-150 ${asideClasses} ${className}`.trim()}
     >
       {/* Nagłówek panelu Backlog */}
       <div className={`p-4 transition-colors ${headerBgClasses}`}>

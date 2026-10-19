@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { Flag, Pencil, Trash2, RotateCcw, AlertCircle } from 'lucide-react';
-import type { Task, Priority } from '../types';
+import { Flag, Pencil, Trash2, RotateCcw, AlertCircle, CalendarDays } from 'lucide-react';
+import type { Task, Priority, DayOfWeek, Weekday } from '../types';
+import { WEEKDAYS, DAY_LABELS } from '../constants';
 
 export interface TaskCardProps {
   /** Obiekt zadania do wyrenderowania */
@@ -15,6 +16,8 @@ export interface TaskCardProps {
   onUpdateTitle?: (id: string, newTitle: string) => void;
   /** Callback przywracający zadanie z kolumny dnia z powrotem do Backlogu */
   onReturnToBacklog?: (id: string) => void;
+  /** Callback szybkiego przeniesienia zadania do wybranego dnia lub Backlogu (optymalizacja mobilna) */
+  onMoveToDay?: (id: string, targetDay: DayOfWeek) => void;
   /** Flaga wskazująca, czy zadanie jest zaległe (przeterminowane z przeszłego dnia) */
   isOverdue?: boolean;
   /** Flaga wskazująca, czy kafelek jest w trakcie przeciągania (dla DragOverlay / dnd-kit) */
@@ -85,6 +88,7 @@ export const TaskCard = React.memo(
       onDelete,
       onUpdateTitle,
       onReturnToBacklog,
+      onMoveToDay,
       isOverdue = false,
       isDragging = false,
       className = '',
@@ -97,6 +101,18 @@ export const TaskCard = React.memo(
     const [editTitle, setEditTitle] = useState(task.title);
     const inputRef = useRef<HTMLInputElement>(null);
     const isCanceledRef = useRef(false);
+
+    const handleMoveSelect = useCallback(
+      (e: React.ChangeEvent<HTMLSelectElement>) => {
+        e.stopPropagation();
+        const val = e.target.value;
+        if (!val) return;
+        const targetDay: DayOfWeek = val === 'backlog' ? null : (val as Weekday);
+        onMoveToDay?.(task.id, targetDay);
+        e.target.value = '';
+      },
+      [onMoveToDay, task.id]
+    );
 
     // Synchronizacja lokalnego stanu edycji z właściwością task.title
     useEffect(() => {
@@ -196,7 +212,7 @@ export const TaskCard = React.memo(
 
     // Płynna obsługa interakcji dnd-kit i ekranów dotykowych
     const cursorClass = isEditing ? '' : isDragging ? 'cursor-grabbing' : 'cursor-grab';
-    const touchClass = isEditing ? '' : 'touch-none';
+    const touchClass = isEditing ? '' : 'touch-manipulation';
 
     return (
       <div
@@ -237,7 +253,7 @@ export const TaskCard = React.memo(
                 maxLength={500}
                 aria-label="Edycja nazwy zadania"
                 data-testid="task-edit-input"
-                className="w-full rounded border border-blue-400 bg-white px-2 py-0.5 text-sm font-medium text-slate-900 shadow-inner focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full rounded border border-blue-400 bg-white px-2 py-0.5 text-base sm:text-sm font-medium text-slate-900 shadow-inner focus:outline-none focus:ring-2 focus:ring-blue-500"
                 onClick={(e) => e.stopPropagation()}
                 onPointerDown={(e) => e.stopPropagation()}
                 onMouseDown={(e) => e.stopPropagation()}
@@ -308,6 +324,38 @@ export const TaskCard = React.memo(
             >
               <Flag className="h-3.5 w-3.5 fill-current" aria-hidden="true" />
             </button>
+
+            {/* Szybkie przeniesienie zadania (Quick Move dla mobile/tablet) */}
+            {onMoveToDay && (
+              <div
+                className="relative inline-flex items-center justify-center rounded p-1 text-slate-400 transition-colors hover:bg-slate-100 hover:text-blue-600 focus-within:ring-2 focus-within:ring-blue-500"
+                title="Przenieś do innego dnia"
+              >
+                <CalendarDays className="h-3.5 w-3.5 shrink-0 pointer-events-none" aria-hidden="true" />
+                <select
+                  defaultValue=""
+                  onChange={handleMoveSelect}
+                  onClick={(e) => e.stopPropagation()}
+                  onPointerDown={(e) => e.stopPropagation()}
+                  onMouseDown={(e) => e.stopPropagation()}
+                  data-testid="task-move-select"
+                  aria-label={`Przenieś zadanie "${task.title}" do innego dnia`}
+                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer text-xs"
+                >
+                  <option value="" disabled>
+                    Przenieś do...
+                  </option>
+                  {task.day !== null && <option value="backlog">Backlog</option>}
+                  {WEEKDAYS.map((wd) =>
+                    wd !== task.day ? (
+                      <option key={wd} value={wd}>
+                        {DAY_LABELS[wd]}
+                      </option>
+                    ) : null
+                  )}
+                </select>
+              </div>
+            )}
 
             {/* Przycisk edycji tekstu */}
             {!isEditing && (

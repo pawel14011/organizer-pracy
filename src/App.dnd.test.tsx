@@ -59,13 +59,13 @@ describe('App DndContext and Sensor Configuration Integration', () => {
     vi.restoreAllMocks();
   });
 
-  it('configures DndContext with kanbanCollisionDetection and 2 sensors', () => {
+  it('configures DndContext with kanbanCollisionDetection and hybrid sensors (mouse, touch, keyboard)', () => {
     render(<App />);
 
     expect(capturedDndProps).toBeDefined();
     expect(capturedDndProps.collisionDetection).toBe(kanbanCollisionDetection);
     expect(capturedDndProps.sensors).toBeDefined();
-    expect(capturedDndProps.sensors).toHaveLength(2);
+    expect(capturedDndProps.sensors).toHaveLength(3);
     expect(typeof capturedDndProps.onDragStart).toBe('function');
     expect(typeof capturedDndProps.onDragOver).toBe('function');
     expect(typeof capturedDndProps.onDragEnd).toBe('function');

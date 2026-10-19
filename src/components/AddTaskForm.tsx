@@ -87,7 +87,7 @@ export const AddTaskForm = React.memo(function AddTaskForm({
         maxLength={500}
         disabled={disabled}
         autoFocus={autoFocus}
-        className="w-full bg-transparent text-xs text-slate-800 placeholder:text-slate-400 focus:outline-none disabled:opacity-50"
+        className="w-full bg-transparent text-base sm:text-xs text-slate-800 placeholder:text-slate-400 focus:outline-none disabled:opacity-50"
       />
 
       <button
@@ -96,7 +96,7 @@ export const AddTaskForm = React.memo(function AddTaskForm({
         disabled={isSubmitDisabled}
         aria-label="Dodaj zadanie"
         title="Dodaj zadanie (Enter)"
-        className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:cursor-not-allowed disabled:opacity-40"
+        className="inline-flex h-7 w-7 sm:h-6 sm:w-6 shrink-0 items-center justify-center rounded-md text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:cursor-not-allowed disabled:opacity-40 cursor-pointer"
       >
         <Plus className="h-4 w-4" aria-hidden="true" />
       </button>

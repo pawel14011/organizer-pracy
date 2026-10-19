@@ -16,10 +16,10 @@ export const WeekGrid = React.memo(function WeekGrid({ children, className = '' 
     <section
       data-testid="week-grid"
       aria-label="Stały tydzień (7 kolumn)"
-      className={`flex flex-1 min-w-0 flex-col overflow-hidden ${className}`.trim()}
+      className={`flex flex-1 min-w-0 flex-col overflow-visible lg:overflow-hidden ${className}`.trim()}
     >
-      <div className="flex flex-1 overflow-x-auto pb-1">
-        <div className="flex h-full min-w-[1260px] flex-1 gap-3">
+      <div className="flex flex-1 overflow-x-visible lg:overflow-x-auto pb-1">
+        <div className="flex h-full gap-3 flex-1 lg:min-w-[1260px]">
           {children}
         </div>
       </div>
