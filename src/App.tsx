@@ -80,6 +80,7 @@ export function App({
     updateTask,
     moveTask,
     returnToBacklog,
+    returnOverdueToBacklog,
   } = useTasks();
 
   // Dynamiczny stan daty referencyjnej do obsługi przejścia północy bez przeładowania strony
@@ -262,6 +263,7 @@ export function App({
                   taskCount={dayTasks.length}
                   isToday={isCurrentDay}
                   isPast={isPast}
+                  onReturnOverdue={returnOverdueToBacklog}
                 >
                   {dayTasks.length > 0
                     ? dayTasks.map((task) => (

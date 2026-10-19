@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { arrayMove } from '@dnd-kit/sortable';
-import type { Task, DayOfWeek, Priority, TaskStatus } from '../types';
+import type { Task, DayOfWeek, Weekday, Priority, TaskStatus } from '../types';
 import { DEFAULT_TASKS_STORAGE_KEY, loadTasksFromStorage, saveTasksToStorage, clearTasksFromStorage } from '../utils/storage';
 
 /**
@@ -68,6 +68,8 @@ export interface UseTasksReturn {
   moveTask: (taskId: string, targetDay: DayOfWeek, newOrder: number) => void;
   /** Przenosi zadanie z kolumny dnia z powrotem do Backlogu */
   returnToBacklog: (taskId: string) => void;
+  /** Przenosi wszystkie niewykonane (zaległe) zadania ze wskazanego dnia do Backlogu */
+  returnOverdueToBacklog: (day: Weekday) => void;
   /** Bezpośrednia modyfikacja pełnej listy zadań (np. przy imporcie kopii zapasowej) */
   setTasks: React.Dispatch<React.SetStateAction<Task[]>>;
   /** Czyści wszystkie zadania ze stanu oraz z pamięci LocalStorage */
@@ -480,6 +482,60 @@ export function useTasks(optionsOrKey?: string | UseTasksOptions): UseTasksRetur
   }, []);
 
   /**
+   * Przenosi wszystkie niewykonane zadania (status !== 'done') z wybranego dnia
+   * z powrotem do Backlogu (day: null).
+   *
+   * Gwarantuje:
+   * - Zadania trafiają na koniec listy Backlogu z zachowaniem ich dotychczasowej względnej kolejności.
+   * - Zadania wykonane ('done') pozostają w danym dniu, a ich indeksy order zostają znormalizowane.
+   * - Brak mutacji innych dni i kolumn.
+   * - Jeśli w danym dniu nie ma niewykonanych zadań, stan nie ulega zmianie.
+   */
+  const returnOverdueToBacklog = useCallback((day: Weekday) => {
+    setTasksState((prevTasks) => {
+      const dayTasksToReturn = prevTasks
+        .filter((t) => t.day === day && t.status !== 'done')
+        .sort((a, b) => a.order - b.order);
+
+      if (dayTasksToReturn.length === 0) {
+        return prevTasks;
+      }
+
+      const remainingInDay = prevTasks
+        .filter((t) => t.day === day && t.status === 'done')
+        .sort((a, b) => a.order - b.order)
+        .map((t, index) => ({
+          ...t,
+          order: index,
+        }));
+
+      const backlogTasks = prevTasks
+        .filter((t) => t.day === null)
+        .sort((a, b) => a.order - b.order);
+
+      const returnedTasks: Task[] = dayTasksToReturn.map((t, index) => ({
+        ...t,
+        day: null,
+        order: backlogTasks.length + index,
+      }));
+
+      const unaffectedTasks = prevTasks.filter(
+        (t) => t.day !== day && t.day !== null
+      );
+
+      const newTasks = [
+        ...unaffectedTasks,
+        ...remainingInDay,
+        ...backlogTasks,
+        ...returnedTasks,
+      ];
+
+      tasksRef.current = newTasks;
+      return newTasks;
+    });
+  }, []);
+
+  /**
    * Czyści listę zadań ze stanu i usuwa powiązany wpis z pamięci LocalStorage.
    */
   const clearTasks = useCallback(() => {
@@ -498,6 +554,7 @@ export function useTasks(optionsOrKey?: string | UseTasksOptions): UseTasksRetur
     deleteTask,
     moveTask,
     returnToBacklog,
+    returnOverdueToBacklog,
     setTasks,
     clearTasks,
   };

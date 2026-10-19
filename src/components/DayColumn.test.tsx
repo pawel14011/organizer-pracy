@@ -1,5 +1,5 @@
 import { render, screen } from '@testing-library/react';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { DayColumn } from './DayColumn';
 import type { Task } from '../types';
 
@@ -92,5 +92,88 @@ describe('DayColumn component', () => {
     expect(droppable).toBeInTheDocument();
     expect(droppable).toHaveAttribute('data-is-over', 'false');
     expect(droppable).toHaveClass('min-h-[160px]');
+  });
+
+  describe('Overdue tasks batch return button', () => {
+    it('renders "Przenieś zaległe do backlogu" button when day is past and contains todo tasks', () => {
+      const onReturnOverdue = vi.fn();
+      render(
+        <DayColumn
+          day="mon"
+          isPast={true}
+          tasks={mockTasks}
+          onReturnOverdue={onReturnOverdue}
+        />
+      );
+
+      const btn = screen.getByTestId('day-return-overdue-btn-mon');
+      expect(btn).toBeInTheDocument();
+      expect(btn).toHaveTextContent('Przenieś zaległe do backlogu');
+      expect(btn).toHaveAttribute('aria-label', 'Przenieś zaległe do backlogu');
+
+      btn.click();
+      expect(onReturnOverdue).toHaveBeenCalledTimes(1);
+      expect(onReturnOverdue).toHaveBeenCalledWith('mon');
+    });
+
+    it('does not render overdue button when isPast is true but all tasks are done', () => {
+      const doneTasks: Task[] = [
+        {
+          id: 'task-done-1',
+          title: 'Wykonane zadanie',
+          status: 'done',
+          priority: 'low',
+          day: 'mon',
+          order: 0,
+          createdAt: '2026-10-19T10:00:00.000Z',
+        },
+      ];
+      const onReturnOverdue = vi.fn();
+
+      render(
+        <DayColumn
+          day="mon"
+          isPast={true}
+          tasks={doneTasks}
+          onReturnOverdue={onReturnOverdue}
+        />
+      );
+
+      expect(screen.queryByTestId('day-return-overdue-btn-mon')).not.toBeInTheDocument();
+    });
+
+    it('does not render overdue button when isPast is true but there are no tasks', () => {
+      const onReturnOverdue = vi.fn();
+      render(
+        <DayColumn
+          day="mon"
+          isPast={true}
+          tasks={[]}
+          onReturnOverdue={onReturnOverdue}
+        />
+      );
+
+      expect(screen.queryByTestId('day-return-overdue-btn-mon')).not.toBeInTheDocument();
+    });
+
+    it('does not render overdue button when day is not past (isPast is false)', () => {
+      const onReturnOverdue = vi.fn();
+      render(
+        <DayColumn
+          day="mon"
+          isPast={false}
+          tasks={mockTasks}
+          onReturnOverdue={onReturnOverdue}
+        />
+      );
+
+      expect(screen.queryByTestId('day-return-overdue-btn-mon')).not.toBeInTheDocument();
+    });
+
+    it('does not render overdue button if onReturnOverdue callback is not provided', () => {
+      render(<DayColumn day="mon" isPast={true} tasks={mockTasks} />);
+
+      expect(screen.queryByTestId('day-return-overdue-btn-mon')).not.toBeInTheDocument();
+    });
   });
 });

@@ -81,7 +81,7 @@ describe('TaskCard component', () => {
 
       const returnBtn = screen.getByTestId('task-return-btn');
       expect(returnBtn).toBeInTheDocument();
-      expect(returnBtn).toHaveAttribute('aria-label', 'Przywróć do Backlogu');
+      expect(returnBtn).toHaveAttribute('aria-label', 'Przywróć do backlogu');
     });
 
     it('does not render overdue badge or return button when task is done even if isOverdue is true', () => {
@@ -374,7 +374,7 @@ describe('TaskCard component', () => {
       expect(screen.getByTestId('task-priority-btn')).toHaveAttribute('aria-label');
       expect(screen.getByTestId('task-edit-btn')).toHaveAttribute('aria-label', 'Edytuj zadanie');
       expect(screen.getByTestId('task-delete-btn')).toHaveAttribute('aria-label', 'Usuń zadanie');
-      expect(screen.getByTestId('task-return-btn')).toHaveAttribute('aria-label', 'Przywróć do Backlogu');
+      expect(screen.getByTestId('task-return-btn')).toHaveAttribute('aria-label', 'Przywróć do backlogu');
       expect(screen.getByTestId('task-checkbox')).toHaveAttribute(
         'aria-label',
         `Oznacz jako ukończone: ${baseTask.title}`

@@ -185,7 +185,7 @@ export const TaskCard = React.memo(
     if (isDone) {
       cardStateClasses = `border-slate-200 ${priorityConfig.border} bg-slate-100/70 opacity-70`;
     } else if (isOverdue) {
-      cardStateClasses = `border-amber-300 ${priorityConfig.border} bg-amber-50/25 shadow-sm hover:border-amber-400 hover:shadow`;
+      cardStateClasses = `border-amber-400 ${priorityConfig.border} bg-amber-50/40 shadow-sm hover:border-amber-500 hover:shadow`;
     } else {
       cardStateClasses = `border-slate-200 ${priorityConfig.border} bg-white shadow-sm hover:border-slate-300 hover:shadow`;
     }
@@ -287,7 +287,7 @@ export const TaskCard = React.memo(
                 onPointerDown={(e) => e.stopPropagation()}
                 onMouseDown={(e) => e.stopPropagation()}
                 data-testid="task-return-btn"
-                aria-label="Przywróć do Backlogu"
+                aria-label="Przywróć do backlogu"
                 title="Przywróć zadanie do Backlogu"
                 className="inline-flex items-center justify-center rounded p-1 text-amber-600 transition-colors hover:bg-amber-100 hover:text-amber-800"
               >
