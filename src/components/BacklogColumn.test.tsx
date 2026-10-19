@@ -56,6 +56,7 @@ describe('BacklogColumn component', () => {
 
     expect(screen.getByTestId('backlog-empty-state')).toBeInTheDocument();
     expect(screen.getByText('Brak zadań w Backlogu')).toBeInTheDocument();
+    expect(screen.getByText('Wpisz zadanie powyżej')).toBeInTheDocument();
   });
 
   it('renders children inside the droppable container', () => {

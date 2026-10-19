@@ -40,14 +40,18 @@ export function DayColumn({
 
   // Stylizacja zależna od stanu dnia (dzisiejszy vs przeszły vs standardowy)
   const containerStateClasses = isToday
-    ? 'border-blue-300 bg-blue-50/40 ring-1 ring-blue-300 shadow-blue-50'
+    ? 'border-blue-300 bg-blue-50/50 ring-2 ring-blue-400/40 shadow-sm'
     : isPast
       ? 'border-slate-200 bg-slate-50/60'
       : 'border-slate-200 bg-slate-50/80';
 
   const headerBgClasses = isToday
-    ? 'border-b border-blue-200/80 bg-blue-100/50'
+    ? 'border-b border-blue-200/90 bg-blue-100/60'
     : 'border-b border-slate-200/80 bg-white/70';
+
+  const badgeCountClasses = isToday
+    ? 'bg-blue-600 text-white font-bold'
+    : 'bg-slate-200/70 text-slate-600 font-semibold';
 
   return (
     <div
@@ -60,7 +64,7 @@ export function DayColumn({
       <div className={`p-3 rounded-t-xl ${headerBgClasses}`}>
         <div className="flex items-center justify-between gap-1">
           <div className="flex items-center gap-1.5 min-w-0">
-            <span className="truncate text-xs font-bold uppercase tracking-wider text-slate-800" title={fullLabel}>
+            <span className="truncate text-xs font-bold uppercase tracking-wider text-slate-800" title={`${fullLabel} (${count})`}>
               <span className="hidden xl:inline">{fullLabel}</span>
               <span className="xl:hidden">{shortLabel}</span>
             </span>
@@ -68,7 +72,7 @@ export function DayColumn({
             {isToday ? (
               <span
                 data-testid={`badge-today-${day}`}
-                className="shrink-0 rounded bg-blue-600 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white"
+                className="shrink-0 rounded bg-blue-600 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white shadow-xs"
               >
                 DZISIAJ
               </span>
@@ -77,7 +81,7 @@ export function DayColumn({
 
           <span
             data-testid={`day-count-${day}`}
-            className="inline-flex min-w-[1.25rem] items-center justify-center rounded-full bg-slate-200/70 px-1.5 py-0.5 text-[11px] font-semibold text-slate-600"
+            className={`inline-flex min-w-[1.25rem] items-center justify-center rounded-full px-1.5 py-0.5 text-[11px] ${badgeCountClasses}`}
             aria-label={`Liczba zadań w: ${fullLabel}: ${count}`}
           >
             {count}
@@ -98,9 +102,10 @@ export function DayColumn({
         ) : (
           <div
             data-testid={`day-empty-state-${day}`}
-            className="flex flex-1 items-center justify-center rounded-lg border border-dashed border-slate-200/80 p-4 text-center text-xs text-slate-400"
+            className="flex flex-1 flex-col items-center justify-center gap-1 rounded-lg border border-dashed border-slate-200/80 p-4 text-center text-xs text-slate-400"
           >
-            Brak zadań
+            <span className="font-medium text-slate-500">Brak zadań</span>
+            <span className="text-[11px] text-slate-400">Upuść zadanie tutaj</span>
           </div>
         )}
       </div>

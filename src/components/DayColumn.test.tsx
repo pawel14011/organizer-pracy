@@ -44,9 +44,11 @@ describe('DayColumn component', () => {
     const column = screen.getByTestId('column-day-tue');
     expect(column).toHaveClass('border-blue-300');
     expect(column).toHaveAttribute('aria-label', 'Wtorek (Dzisiaj)');
+    expect(screen.getByTestId('day-count-tue')).toHaveClass('bg-blue-600', 'text-white');
 
     rerender(<DayColumn day="tue" isToday={false} />);
     expect(screen.queryByTestId('badge-today-tue')).not.toBeInTheDocument();
+    expect(screen.getByTestId('day-count-tue')).not.toHaveClass('bg-blue-600');
   });
 
   it('renders empty state placeholder when no children are provided', () => {
@@ -54,6 +56,7 @@ describe('DayColumn component', () => {
 
     expect(screen.getByTestId('day-empty-state-fri')).toBeInTheDocument();
     expect(screen.getByText('Brak zadań')).toBeInTheDocument();
+    expect(screen.getByText('Upuść zadanie tutaj')).toBeInTheDocument();
   });
 
   it('renders children inside droppable container with proper id and testid', () => {
