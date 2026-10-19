@@ -136,9 +136,24 @@ Nigdy nie uznawaj zadania za zakończone bez faktycznego sprawdzenia:
 
 ---
 
-## 11. Procedura Zatwierdzania Implementacji (Git Commit, Push i Zamykanie Zadań)
+## 11. Domyślny Przepływ Pracy z Gałęziami i Procedura Zatwierdzania (Feature Branch, PR & Merge)
 
-* **Warunek uruchomienia:** Gdy po zakończonej implementacji i testach użytkownik potwierdzi akceptację wdrożenia (np. *"zatwierdzam"*, *"działa"*, *"zaakceptowane"*, *"zrób commit i push"* itp.):
-  1. **Git Commit:** Utwórz atomowy commit w standardzie Conventional Commits ze wskazaniem zamykanego zadania (np. `feat: konfiguracja ... (closes #X)`).
-  2. **Git Push:** Wyślij zatwierdzone zmiany do zdalnego repozytorium poleceniem `git push origin <branch>`.
-  3. **Zamknięcie zgłoszenia:** Zamknij powiązane zadanie w GitHub Issues poleceniem `gh issue close <nr> --comment "..."`.
+Domyślnym i bezwzględnym standardem realizacji każdej nowej funkcjonalności (zadania / issue) jest praca na dedykowanej gałęzi (*feature branch*) oraz weryfikacja przez Pull Request (PR):
+
+1. **Dedykowana gałąź dla każdego zadania (Feature Branch):**
+   * Przed rozpoczęciem prac upewnij się, że lokalna gałąź `main` jest zsynchronizowana ze zdalnym repozytorium (`git checkout main && git pull`).
+   * Utwórz nową gałąź z czytelną nazwą nawiązującą do zadania (np. `feature/issue-<nr>-<opis>` lub `feat/<nr>-<opis>`) i przełącz się na nią.
+   * Wszystkie prace implementacyjne i testowe prowadź wyłącznie na tej gałęzi. Bezwzględny zakaz implementowania nowych funkcjonalności bezpośrednio na gałęzi `main`.
+
+2. **Zakończenie prac i utworzenie Pull Requesta (PR):**
+   * Po zakończeniu implementacji i pomyślnej autoweryfikacji (zgodnie z sekcją 5: `npx tsc --noEmit`, testy jednostkowe/E2E):
+     * Utwórz atomowy commit na gałęzi funkcjonalnej w standardzie Conventional Commits ze wskazaniem zamykanego zadania (np. `feat: konfiguracja środowiska testowego (closes #4)`).
+     * Opublikuj gałąź w zdalnym repozytorium: `git push -u origin <nazwa-gałęzi>`.
+     * Utwórz Pull Request za pomocą GitHub CLI: `gh pr create --title "..." --body "..."` (ze wskazaniem zamykanego zadania np. `Closes #4`).
+   * Poinformuj użytkownika o gotowości zmian do przeglądu i podaj link/numer Pull Requesta, oczekując na jego ręczną weryfikację.
+
+3. **Procedura scalenia po akceptacji (Merge & Close):**
+   * **Warunek uruchomienia:** Dopiero gdy użytkownik ręcznie zweryfikuje Pull Request i wyrazi akceptację wdrożenia (np. *"zatwierdzam"*, *"działa"*, *"zaakceptowane"*, *"zrób merge"*, *"scal"* itp.):
+     1. **Scalenie PR (Merge):** Dokonaj scalenia Pull Requesta do gałęzi `main` poleceniem `gh pr merge <nr-pr> --merge` (lub `--squash`) wraz z usunięciem gałęzi zdalnej (`--delete-branch`).
+     2. **Aktualizacja lokalnego środowiska:** Przełącz się na gałąź `main` i pobierz najnowszy stan: `git checkout main && git pull`.
+     3. **Weryfikacja/zamknięcie zgłoszenia:** Upewnij się, że powiązane zadanie w GitHub Issues zostało zamknięte (jeśli nie zamknęło się automatycznie przez PR: `gh issue close <nr> --comment "Zadanie zrealizowane i scalone do main w PR #X"`).
