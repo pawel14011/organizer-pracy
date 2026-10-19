@@ -7,13 +7,14 @@ import {
   type DragCancelEvent,
   type DndContextProps,
 } from '@dnd-kit/core';
-import App from './App';
+import App, { dropAnimationConfig } from './App';
 import { DEFAULT_TASKS_STORAGE_KEY } from './utils/storage';
 import { kanbanCollisionDetection } from './utils';
 import type { Task } from './types';
 
 // Przechwytywanie właściwości przekazanych do DndContext w celu precyzyjnej weryfikacji konfiguracji
 let capturedDndProps: DndContextProps = {};
+let capturedDragOverlayProps: { dropAnimation?: unknown } = {};
 
 vi.mock('@dnd-kit/core', async () => {
   const actual = await vi.importActual<typeof import('@dnd-kit/core')>('@dnd-kit/core');
@@ -22,6 +23,20 @@ vi.mock('@dnd-kit/core', async () => {
     DndContext: (props: DndContextProps) => {
       capturedDndProps = props;
       return <actual.DndContext {...props}>{props.children}</actual.DndContext>;
+    },
+    DragOverlay: ({
+      children,
+      ...props
+    }: {
+      children?: React.ReactNode;
+      dropAnimation?: unknown;
+    }) => {
+      capturedDragOverlayProps = props;
+      return (
+        <div data-testid="drag-overlay-root">
+          {children}
+        </div>
+      );
     },
   };
 });
@@ -40,6 +55,7 @@ describe('App DndContext and Sensor Configuration Integration', () => {
   beforeEach(() => {
     localStorage.clear();
     capturedDndProps = {};
+    capturedDragOverlayProps = {};
     vi.restoreAllMocks();
   });
 
@@ -368,6 +384,253 @@ describe('App DndContext and Sensor Configuration Integration', () => {
       );
       expect(savedTasks[0].day).toBe('wed');
       expect(savedTasks[0].order).toBe(0);
+    });
+
+    it('moves a task from one day to another empty day by dropping directly on the day column container', () => {
+      const task: Task = {
+        id: 'task-thu-to-sat',
+        title: 'Przenieś z czwartku na pustą sobotę',
+        status: 'todo',
+        priority: 'high',
+        day: 'thu',
+        order: 0,
+        createdAt: '2026-10-19T10:00:00.000Z',
+      };
+      localStorage.setItem(DEFAULT_TASKS_STORAGE_KEY, JSON.stringify([task]));
+
+      render(<App />);
+
+      expect(screen.getByTestId('day-count-thu')).toHaveTextContent('1');
+      expect(screen.getByTestId('day-count-sat')).toHaveTextContent('0');
+
+      act(() => {
+        capturedDndProps.onDragEnd?.({
+          active: { id: task.id },
+          over: { id: 'sat' },
+        } as unknown as DragEndEvent);
+      });
+
+      expect(screen.getByTestId('day-count-thu')).toHaveTextContent('0');
+      expect(screen.getByTestId('day-count-sat')).toHaveTextContent('1');
+
+      const savedTasks: Task[] = JSON.parse(
+        localStorage.getItem(DEFAULT_TASKS_STORAGE_KEY) || '[]'
+      );
+      expect(savedTasks[0].day).toBe('sat');
+      expect(savedTasks[0].order).toBe(0);
+    });
+
+    it('reorders tasks within Backlog using arrayMove when dropped over another backlog task', () => {
+      const backlogTask1: Task = {
+        id: 'backlog-1',
+        title: 'Pierwsze w backlogu',
+        status: 'todo',
+        priority: 'low',
+        day: null,
+        order: 0,
+        createdAt: '2026-10-19T10:00:00.000Z',
+      };
+      const backlogTask2: Task = {
+        id: 'backlog-2',
+        title: 'Drugie w backlogu',
+        status: 'todo',
+        priority: 'high',
+        day: null,
+        order: 1,
+        createdAt: '2026-10-19T10:05:00.000Z',
+      };
+      localStorage.setItem(
+        DEFAULT_TASKS_STORAGE_KEY,
+        JSON.stringify([backlogTask1, backlogTask2])
+      );
+
+      render(<App />);
+
+      expect(screen.getByTestId('backlog-count')).toHaveTextContent('2');
+
+      // Przesuń drugie zadanie na pozycję pierwszego
+      act(() => {
+        capturedDndProps.onDragEnd?.({
+          active: { id: backlogTask2.id },
+          over: { id: backlogTask1.id },
+        } as unknown as DragEndEvent);
+      });
+
+      const savedTasks: Task[] = JSON.parse(
+        localStorage.getItem(DEFAULT_TASKS_STORAGE_KEY) || '[]'
+      );
+      const updated2 = savedTasks.find((t) => t.id === 'backlog-2');
+      const updated1 = savedTasks.find((t) => t.id === 'backlog-1');
+
+      expect(updated2?.order).toBe(0);
+      expect(updated1?.order).toBe(1);
+    });
+
+    it('guarantees persistence across page reloads (simulating F5 refresh)', () => {
+      const task1: Task = {
+        id: 'task-f5-1',
+        title: 'Zadanie do zaplanowania na środę',
+        status: 'todo',
+        priority: 'medium',
+        day: null,
+        order: 0,
+        createdAt: '2026-10-19T10:00:00.000Z',
+      };
+      const task2: Task = {
+        id: 'task-f5-2',
+        title: 'Zadanie z poniedziałku do backlogu',
+        status: 'done',
+        priority: 'high',
+        day: 'mon',
+        order: 0,
+        createdAt: '2026-10-19T10:00:00.000Z',
+      };
+      localStorage.setItem(DEFAULT_TASKS_STORAGE_KEY, JSON.stringify([task1, task2]));
+
+      // Pierwsze renderowanie aplikacji
+      const { unmount } = render(<App />);
+
+      expect(screen.getByTestId('backlog-count')).toHaveTextContent('1');
+      expect(screen.getByTestId('day-count-wed')).toHaveTextContent('0');
+      expect(screen.getByTestId('day-count-mon')).toHaveTextContent('1');
+
+      // Krok 1: Przeciągnięcie zadania 1 z Backlogu do Środy
+      act(() => {
+        capturedDndProps.onDragEnd?.({
+          active: { id: task1.id },
+          over: { id: 'wed' },
+        } as unknown as DragEndEvent);
+      });
+
+      // Krok 2: Przeciągnięcie zadania 2 z Poniedziałku do Backlogu
+      act(() => {
+        capturedDndProps.onDragEnd?.({
+          active: { id: task2.id },
+          over: { id: 'backlog' },
+        } as unknown as DragEndEvent);
+      });
+
+      expect(screen.getByTestId('day-count-wed')).toHaveTextContent('1');
+      expect(screen.getByTestId('day-count-mon')).toHaveTextContent('0');
+      expect(screen.getByTestId('backlog-count')).toHaveTextContent('1');
+
+      // Symulacja odświeżenia strony (F5): odmontowanie i ponowne zamontowanie komponentu App
+      unmount();
+      render(<App />);
+
+      // Weryfikacja: zadania pozostają dokładnie w tych miejscach, w których zostały upuszczone
+      expect(screen.getByTestId('day-count-wed')).toHaveTextContent('1');
+      expect(screen.getByTestId('day-count-mon')).toHaveTextContent('0');
+      expect(screen.getByTestId('backlog-count')).toHaveTextContent('1');
+
+      const reloadedTasks: Task[] = JSON.parse(
+        localStorage.getItem(DEFAULT_TASKS_STORAGE_KEY) || '[]'
+      );
+      const reloadedTask1 = reloadedTasks.find((t) => t.id === 'task-f5-1');
+      const reloadedTask2 = reloadedTasks.find((t) => t.id === 'task-f5-2');
+
+      expect(reloadedTask1?.day).toBe('wed');
+      expect(reloadedTask1?.order).toBe(0);
+      expect(reloadedTask2?.day).toBeNull();
+      expect(reloadedTask2?.order).toBe(0);
+    });
+  });
+
+  describe('DragOverlay Floating Preview and Drop Animation', () => {
+    it('configures DragOverlay with dropAnimationConfig matching specification', () => {
+      render(<App />);
+
+      expect(capturedDragOverlayProps).toBeDefined();
+      expect(capturedDragOverlayProps.dropAnimation).toEqual(dropAnimationConfig);
+      expect(dropAnimationConfig).toMatchObject({
+        duration: 180,
+        easing: 'cubic-bezier(0.18, 0.67, 0.6, 1.22)',
+      });
+    });
+
+    it('renders the floating preview with rotate-2 and scale-105 when dragging starts', () => {
+      const task: Task = {
+        id: 'overlay-preview-task',
+        title: 'Zadanie w DragOverlay',
+        status: 'todo',
+        priority: 'high',
+        day: null,
+        order: 0,
+        createdAt: '2026-10-19T10:00:00.000Z',
+      };
+      localStorage.setItem(DEFAULT_TASKS_STORAGE_KEY, JSON.stringify([task]));
+
+      render(<App />);
+
+      // Przed rozpoczęciem przeciągania DragOverlay nie zawiera kafelka
+      expect(screen.queryByTestId('drag-overlay-card')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('drag-overlay-wrapper')).not.toBeInTheDocument();
+
+      // Rozpoczęcie przeciągania
+      act(() => {
+        capturedDndProps.onDragStart?.({
+          active: { id: task.id },
+        } as unknown as DragStartEvent);
+      });
+
+      // Podgląd w DragOverlay jest widoczny z odpowiednią stylizacją
+      const overlayWrapper = screen.getByTestId('drag-overlay-wrapper');
+      const overlayCard = screen.getByTestId('drag-overlay-card');
+
+      expect(overlayWrapper).toBeInTheDocument();
+      expect(overlayWrapper).toHaveClass('rotate-2');
+      expect(overlayWrapper).toHaveClass('pointer-events-none');
+
+      expect(overlayCard).toBeInTheDocument();
+      expect(overlayCard).toHaveTextContent('Zadanie w DragOverlay');
+      expect(overlayCard).toHaveClass('shadow-2xl');
+      expect(overlayCard).toHaveClass('ring-2');
+      expect(overlayCard).toHaveClass('ring-blue-500');
+      expect(overlayCard).toHaveClass('scale-105');
+      expect(overlayCard).toHaveClass('cursor-grabbing');
+
+      // Zakończenie przeciągania: DragOverlay czyści podgląd
+      act(() => {
+        capturedDndProps.onDragEnd?.({
+          active: { id: task.id },
+          over: null,
+        } as unknown as DragEndEvent);
+      });
+
+      expect(screen.queryByTestId('drag-overlay-card')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('drag-overlay-wrapper')).not.toBeInTheDocument();
+    });
+
+    it('clears the DragOverlay floating preview when dragging is canceled (e.g. Escape)', () => {
+      const task: Task = {
+        id: 'overlay-cancel-task',
+        title: 'Anulowane przeciąganie',
+        status: 'todo',
+        priority: 'medium',
+        day: 'tue',
+        order: 0,
+        createdAt: '2026-10-19T10:00:00.000Z',
+      };
+      localStorage.setItem(DEFAULT_TASKS_STORAGE_KEY, JSON.stringify([task]));
+
+      render(<App />);
+
+      act(() => {
+        capturedDndProps.onDragStart?.({
+          active: { id: task.id },
+        } as unknown as DragStartEvent);
+      });
+
+      expect(screen.getByTestId('drag-overlay-card')).toBeInTheDocument();
+
+      act(() => {
+        capturedDndProps.onDragCancel?.({
+          active: { id: task.id },
+        } as unknown as DragCancelEvent);
+      });
+
+      expect(screen.queryByTestId('drag-overlay-card')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('drag-overlay-wrapper')).not.toBeInTheDocument();
     });
   });
 });
