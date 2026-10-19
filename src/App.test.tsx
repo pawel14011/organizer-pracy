@@ -22,9 +22,10 @@ describe('App Layout Integration', () => {
     expect(heading).toBeInTheDocument();
     expect(screen.getByTestId('header')).toBeInTheDocument();
 
-    // Backlog
+    // Backlog & MobileNav
+    expect(screen.getByTestId('mobile-nav')).toBeInTheDocument();
     expect(screen.getByTestId('column-backlog')).toBeInTheDocument();
-    expect(screen.getByText('Backlog')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 2, name: /backlog/i })).toBeInTheDocument();
     expect(screen.getByTestId('backlog-count')).toHaveTextContent('0');
 
     // Week Grid

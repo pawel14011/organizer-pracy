@@ -124,11 +124,12 @@ export const DayColumn = React.memo(function DayColumn({
   return (
     <div
       ref={setNodeRef}
+      id={`column-container-${day}`}
       data-testid={`column-day-${day}`}
       data-day={day}
       data-column-over={isTargetOver ? 'true' : 'false'}
       aria-label={`${fullLabel}${isToday ? ' (Dzisiaj)' : ''}`}
-      className={`flex min-w-[180px] flex-1 flex-col rounded-xl border shadow-sm transition-all duration-150 ${containerStateClasses} ${className}`.trim()}
+      className={`flex w-[86vw] max-w-[340px] sm:w-[280px] sm:flex-none lg:flex-1 lg:w-auto lg:min-w-[180px] shrink-0 snap-center flex-col rounded-xl border shadow-sm transition-all duration-150 ${containerStateClasses} ${className}`.trim()}
     >
       {/* Nagłówek kolumny dnia */}
       <div className={`p-3 rounded-t-xl transition-colors ${headerBgClasses}`}>

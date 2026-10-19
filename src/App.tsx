@@ -19,9 +19,10 @@ import {
   DayColumn,
   SortableTaskCard,
   TaskCard,
+  MobileNav,
 } from './components';
 import { WEEKDAYS, BACKLOG_DROPPABLE_ID } from './constants';
-import { isToday, isPastDay, kanbanCollisionDetection } from './utils';
+import { isToday, isPastDay, getCurrentDayOfWeek, kanbanCollisionDetection } from './utils';
 import type { DayOfWeek, Weekday } from './types';
 
 /**
@@ -90,13 +91,16 @@ export function App({
   // Identyfikator aktualnie przeciąganego zadania
   const [activeTaskId, setActiveTaskId] = useState<string | null>(null);
 
+  // Aktywna kolumna wybrana na pasku nawigacji mobilnej (MobileNav)
+  const [activeMobileColumn, setActiveMobileColumn] = useState<string>(BACKLOG_DROPPABLE_ID);
+
   // Aktywne zadanie przeciągane w czasie rzeczywistym (wyświetlane w DragOverlay)
   const activeTask = useMemo(
     () => (activeTaskId ? tasks.find((task) => task.id === activeTaskId) ?? null : null),
     [activeTaskId, tasks]
   );
 
-  // Skonfigurowane sensory: PointerSensor (distance: 8px) oraz KeyboardSensor (sortableKeyboardCoordinates)
+  // Skonfigurowane sensory: MouseSensor (distance: 8px), TouchSensor (delay: 250ms) oraz KeyboardSensor
   const sensors = useDndSensors();
 
   useEffect(() => {
@@ -113,6 +117,28 @@ export function App({
       window.clearInterval(intervalId);
     };
   }, []);
+
+  // Płynne przewinięcie widoku mobilnego do wybranej kolumny
+  const handleSelectMobileColumn = useCallback((columnId: string) => {
+    setActiveMobileColumn(columnId);
+    const elementId =
+      columnId === BACKLOG_DROPPABLE_ID
+        ? 'column-container-backlog'
+        : `column-container-${columnId}`;
+    const element = document.getElementById(elementId);
+    if (element) {
+      element.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+    }
+  }, []);
+
+  // Obsługa szybkiego przeniesienia zadania (Quick Move) dla wygody użytkowników smartfonów i tabletów
+  const handleQuickMoveTask = useCallback(
+    (taskId: string, targetDay: DayOfWeek) => {
+      const targetTasks = targetDay === null ? backlogTasks : getTasksByDay(targetDay);
+      moveTask(taskId, targetDay, targetTasks.length);
+    },
+    [backlogTasks, getTasksByDay, moveTask]
+  );
 
   // Obsługa zdarzenia rozpoczęcia przeciągania zadania
   const handleDragStart = useCallback(
@@ -238,10 +264,18 @@ export function App({
           onImportTasks={setTasks}
         />
 
-        {/* Główna przestrzeń robocza: Backlog po lewej, Stały Tydzień po prawej */}
+        {/* Pasek szybkiego wyboru kolumny dla smartfonów i tabletów (< lg) */}
+        <MobileNav
+          activeColumnId={activeMobileColumn}
+          backlogCount={backlogTasks.length}
+          todayWeekday={getCurrentDayOfWeek(currentDate)}
+          onSelectColumn={handleSelectMobileColumn}
+        />
+
+        {/* Główna przestrzeń robocza: na mobile jeden płynny snap-scroll, na desktopie Backlog po lewej, Stały Tydzień po prawej */}
         <main
           aria-label="Tablica zadań"
-          className="flex flex-1 min-h-0 gap-4 p-4 lg:p-6 overflow-hidden"
+          className="flex flex-1 min-h-0 gap-3 p-3 overflow-x-auto snap-x snap-mandatory scroll-smooth lg:gap-4 lg:p-6 lg:overflow-hidden lg:snap-none"
         >
           <BacklogColumn
             tasks={backlogTasks}
@@ -259,6 +293,7 @@ export function App({
                     onDelete={deleteTask}
                     onUpdateTitle={handleUpdateTitle}
                     onReturnToBacklog={returnToBacklog}
+                    onMoveToDay={handleQuickMoveTask}
                   />
                 ))
               : null}
@@ -291,6 +326,7 @@ export function App({
                           onDelete={deleteTask}
                           onUpdateTitle={handleUpdateTitle}
                           onReturnToBacklog={returnToBacklog}
+                          onMoveToDay={handleQuickMoveTask}
                           isOverdue={isPast && task.status !== 'done'}
                         />
                       ))

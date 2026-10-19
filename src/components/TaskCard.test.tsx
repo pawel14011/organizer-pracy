@@ -353,11 +353,22 @@ describe('TaskCard component', () => {
       expect(containerMouseDown).not.toHaveBeenCalled();
     });
 
-    it('renders touch-none and cursor-grab styles by default for DnD touch/mouse support', () => {
+    it('renders touch-manipulation and cursor-grab styles by default for DnD touch/mouse support', () => {
       render(<TaskCard task={baseTask} />);
       const card = screen.getByTestId('task-card');
-      expect(card).toHaveClass('touch-none');
+      expect(card).toHaveClass('touch-manipulation');
       expect(card).toHaveClass('cursor-grab');
+    });
+
+    it('renders Quick Move select and calls onMoveToDay when target day is selected', () => {
+      const onMoveToDay = vi.fn();
+      render(<TaskCard task={baseTask} onMoveToDay={onMoveToDay} />);
+
+      const moveSelect = screen.getByTestId('task-move-select');
+      expect(moveSelect).toBeInTheDocument();
+
+      fireEvent.change(moveSelect, { target: { value: 'wed' } });
+      expect(onMoveToDay).toHaveBeenCalledWith(baseTask.id, 'wed');
     });
   });
 
@@ -368,6 +379,7 @@ describe('TaskCard component', () => {
           task={baseTask}
           isOverdue={true}
           onReturnToBacklog={() => {}}
+          onMoveToDay={() => {}}
         />
       );
 
@@ -375,6 +387,7 @@ describe('TaskCard component', () => {
       expect(screen.getByTestId('task-edit-btn')).toHaveAttribute('aria-label', 'Edytuj zadanie');
       expect(screen.getByTestId('task-delete-btn')).toHaveAttribute('aria-label', 'Usuń zadanie');
       expect(screen.getByTestId('task-return-btn')).toHaveAttribute('aria-label', 'Przywróć do backlogu');
+      expect(screen.getByTestId('task-move-select')).toHaveAttribute('aria-label');
       expect(screen.getByTestId('task-checkbox')).toHaveAttribute(
         'aria-label',
         `Oznacz jako ukończone: ${baseTask.title}`

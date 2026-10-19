@@ -179,23 +179,23 @@ export const Header = React.memo(function Header({
     <>
       <header
         data-testid="header"
-        className={`flex h-16 shrink-0 items-center justify-between border-b border-slate-200 bg-white px-6 shadow-sm ${className}`.trim()}
+        className={`flex h-14 sm:h-16 shrink-0 items-center justify-between border-b border-slate-200 bg-white px-3 sm:px-6 shadow-sm ${className}`.trim()}
       >
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 sm:gap-3 min-w-0">
           <h1
             data-testid="header-title"
-            className="text-xl font-bold tracking-tight text-slate-900"
+            className="truncate text-base sm:text-xl font-bold tracking-tight text-slate-900"
           >
             ORGANIZER PRACY
           </h1>
-          <span className="hidden rounded-md bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-500 sm:inline-block">
+          <span className="hidden rounded-md bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-500 md:inline-block shrink-0">
             Planer Tygodniowy MVP
           </span>
         </div>
 
         <div
           data-testid="header-actions"
-          className="flex items-center gap-2"
+          className="flex items-center gap-1.5 sm:gap-2 shrink-0"
         >
           {/* Przycisk eksportu bazy zadań do pliku JSON */}
           <button
@@ -203,10 +203,11 @@ export const Header = React.memo(function Header({
             data-testid="export-backup-btn"
             onClick={handleExport}
             aria-label="Eksportuj kopię zapasową zadań do pliku JSON"
-            className="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs sm:text-sm font-medium text-slate-700 shadow-sm transition-colors hover:bg-slate-50 hover:text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1"
+            title="Eksportuj kopię zapasową (JSON)"
+            className="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 bg-white p-2 sm:px-3 sm:py-1.5 text-xs sm:text-sm font-medium text-slate-700 shadow-sm transition-colors hover:bg-slate-50 hover:text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 cursor-pointer"
           >
-            <Download className="h-4 w-4 text-slate-500" aria-hidden="true" />
-            <span>Eksportuj</span>
+            <Download className="h-4 w-4 text-slate-500 shrink-0" aria-hidden="true" />
+            <span className="hidden sm:inline">Eksportuj</span>
           </button>
 
           {/* Przycisk importu otwierający okno wyboru pliku JSON */}
@@ -215,10 +216,11 @@ export const Header = React.memo(function Header({
             data-testid="import-backup-btn"
             onClick={handleImportButtonClick}
             aria-label="Importuj zadania z pliku JSON kopii zapasowej"
-            className="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs sm:text-sm font-medium text-slate-700 shadow-sm transition-colors hover:bg-slate-50 hover:text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1"
+            title="Importuj kopię zapasową (JSON)"
+            className="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 bg-white p-2 sm:px-3 sm:py-1.5 text-xs sm:text-sm font-medium text-slate-700 shadow-sm transition-colors hover:bg-slate-50 hover:text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 cursor-pointer"
           >
-            <Upload className="h-4 w-4 text-slate-500" aria-hidden="true" />
-            <span>Importuj</span>
+            <Upload className="h-4 w-4 text-slate-500 shrink-0" aria-hidden="true" />
+            <span className="hidden sm:inline">Importuj</span>
           </button>
 
           {/* Niewidoczne pole wyboru pliku JSON */}

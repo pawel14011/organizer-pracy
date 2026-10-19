@@ -5,3 +5,4 @@ export * from './WeekGrid';
 export * from './TaskCard';
 export * from './AddTaskForm';
 export * from './SortableTaskCard';
+export * from './MobileNav';
