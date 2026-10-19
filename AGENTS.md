@@ -133,3 +133,12 @@ Nigdy nie uznawaj zadania za zakończone bez faktycznego sprawdzenia:
 * **Kod źródłowy:** Język angielski (nazwy plików, komponentów, zmiennych, funkcji, typów, komentarze techniczne).
 * **Interfejs Użytkownika (UI):** Język polski (zgodnie ze `spec.md`, np. nazwy dni tygodnia, etykiety przycisków, powiadomienia).
 * **Komunikacja z użytkownikiem:** Język polski.
+
+---
+
+## 11. Procedura Zatwierdzania Implementacji (Git Commit, Push i Zamykanie Zadań)
+
+* **Warunek uruchomienia:** Gdy po zakończonej implementacji i testach użytkownik potwierdzi akceptację wdrożenia (np. *"zatwierdzam"*, *"działa"*, *"zaakceptowane"*, *"zrób commit i push"* itp.):
+  1. **Git Commit:** Utwórz atomowy commit w standardzie Conventional Commits ze wskazaniem zamykanego zadania (np. `feat: konfiguracja ... (closes #X)`).
+  2. **Git Push:** Wyślij zatwierdzone zmiany do zdalnego repozytorium poleceniem `git push origin <branch>`.
+  3. **Zamknięcie zgłoszenia:** Zamknij powiązane zadanie w GitHub Issues poleceniem `gh issue close <nr> --comment "..."`.
