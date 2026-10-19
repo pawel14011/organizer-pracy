@@ -1,4 +1,5 @@
 import type { Task } from '../types';
+import { WEEKDAYS } from '../constants';
 
 /**
  * Domyślny klucz LocalStorage dla zadań Organizera Pracy.
@@ -6,16 +7,72 @@ import type { Task } from '../types';
 export const DEFAULT_TASKS_STORAGE_KEY = 'organizer_tasks';
 
 /**
+ * Strażnik typu (type guard) sprawdzający, czy dany obiekt spełnia kryteria modelu Task.
+ *
+ * Weryfikuje:
+ * - id: niepusty ciąg znaków
+ * - title: niepusty ciąg znaków (po odcięciu białych znaków)
+ * - status: 'todo' | 'done'
+ * - priority: 'low' | 'medium' | 'high'
+ * - day: 'mon' ... 'sun' | null
+ * - order: nieujemna liczba całkowita (>= 0)
+ * - createdAt: poprawny format daty ISO
+ *
+ * @param value Dowolna wartość do weryfikacji
+ * @returns true jeśli wartość jest poprawnym obiektem Task, w przeciwnym razie false
+ */
+export function isTask(value: unknown): value is Task {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const candidate = value as Record<string, unknown>;
+
+  const hasValidId =
+    typeof candidate.id === 'string' && candidate.id.trim().length > 0;
+  const hasValidTitle =
+    typeof candidate.title === 'string' && candidate.title.trim().length > 0;
+  const hasValidStatus =
+    candidate.status === 'todo' || candidate.status === 'done';
+  const hasValidPriority =
+    candidate.priority === 'low' ||
+    candidate.priority === 'medium' ||
+    candidate.priority === 'high';
+  const hasValidDay =
+    candidate.day === null ||
+    (typeof candidate.day === 'string' &&
+      (WEEKDAYS as readonly string[]).includes(candidate.day));
+  const hasValidOrder =
+    typeof candidate.order === 'number' &&
+    Number.isInteger(candidate.order) &&
+    candidate.order >= 0;
+  const hasValidCreatedAt =
+    typeof candidate.createdAt === 'string' &&
+    !isNaN(Date.parse(candidate.createdAt));
+
+  return (
+    hasValidId &&
+    hasValidTitle &&
+    hasValidStatus &&
+    hasValidPriority &&
+    hasValidDay &&
+    hasValidOrder &&
+    hasValidCreatedAt
+  );
+}
+
+/**
  * Bezpieczny odczyt zadań z pamięci LocalStorage.
  *
  * Obsługuje przypadki brzegowe:
  * - brak danych lub pusty ciąg -> zwraca pustą tablicę []
  * - niepoprawny JSON (SyntaxError) -> loguje ostrzeżenie i zwraca pustą tablicę []
- * - dane niebędące tablicą (np. obiekt, liczba, ciąg znaków) -> loguje ostrzeżenie i zwraca pustą tablicę []
+ * - dane niebędące tablicą (np. null, obiekt, liczba, ciąg znaków) -> loguje precyzyjne ostrzeżenie i zwraca []
+ * - uszkodzone elementy wewnątrz tablicy -> odrzuca wadliwe rekordy, zachowuje poprawne i loguje ostrzeżenie
  * - błąd dostępu do LocalStorage (np. tryb incognito, SecurityError) -> loguje ostrzeżenie i zwraca pustą tablicę []
  *
  * @param key Opcjonalny klucz w LocalStorage (domyślnie DEFAULT_TASKS_STORAGE_KEY)
- * @returns Tablica zadań Task[] lub pusta tablica [] w przypadku błędu/braku danych
+ * @returns Tablica zweryfikowanych zadań Task[] lub pusta tablica [] w przypadku błędu/braku danych
  */
 export function loadTasksFromStorage(key: string = DEFAULT_TASKS_STORAGE_KEY): Task[] {
   try {
@@ -32,13 +89,31 @@ export function loadTasksFromStorage(key: string = DEFAULT_TASKS_STORAGE_KEY): T
     const parsed: unknown = JSON.parse(rawData);
 
     if (!Array.isArray(parsed)) {
+      const receivedType = parsed === null ? 'null' : typeof parsed;
       console.warn(
-        `[Storage] Oczekiwano tablicy zadań pod kluczem "${key}", ale otrzymano ${typeof parsed}. Zwracanie pustej tablicy.`
+        `[Storage] Oczekiwano tablicy zadań pod kluczem "${key}", ale otrzymano ${receivedType}. Zwracanie pustej tablicy.`
       );
       return [];
     }
 
-    return parsed as Task[];
+    const validTasks: Task[] = [];
+    let invalidCount = 0;
+
+    for (const item of parsed) {
+      if (isTask(item)) {
+        validTasks.push(item);
+      } else {
+        invalidCount++;
+      }
+    }
+
+    if (invalidCount > 0) {
+      console.warn(
+        `[Storage] Wykryto ${invalidCount} niepoprawnych elementów w tablicy pod kluczem "${key}". Zostały one zignorowane.`
+      );
+    }
+
+    return validTasks;
   } catch (error) {
     console.warn(`[Storage] Błąd podczas odczytu zadań z klucza "${key}":`, error);
     return [];
