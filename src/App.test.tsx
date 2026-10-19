@@ -1,4 +1,4 @@
-import { render, screen, act } from '@testing-library/react';
+import { render, screen, act, fireEvent } from '@testing-library/react';
 import { describe, expect, it, beforeEach, vi } from 'vitest';
 import App from './App';
 import { DEFAULT_TASKS_STORAGE_KEY } from './utils/storage';
@@ -126,5 +126,30 @@ describe('App Layout Integration', () => {
     expect(screen.queryByTestId('badge-today-mon')).not.toBeInTheDocument();
 
     vi.useRealTimers();
+  });
+
+  it('adds a new task to Backlog using AddTaskForm when user submits text with Enter', () => {
+    render(<App />);
+
+    expect(screen.getByTestId('backlog-count')).toHaveTextContent('0');
+
+    const input = screen.getByTestId('add-task-input');
+    const form = screen.getByTestId('add-task-form');
+
+    fireEvent.change(input, { target: { value: 'Nowe zadanie integracyjne' } });
+    fireEvent.submit(form);
+
+    expect(screen.getByTestId('backlog-count')).toHaveTextContent('1');
+    expect(screen.getByText('Nowe zadanie integracyjne')).toBeInTheDocument();
+
+    // Verify task default priority medium
+    const taskCard = screen.getByTestId('task-card');
+    expect(taskCard).toHaveAttribute('data-priority', 'medium');
+    const priorityBtn = screen.getByTestId('task-priority-btn');
+    expect(priorityBtn).toHaveAttribute('aria-label', expect.stringMatching(/średni/i));
+
+    // Verify input is cleared and still focused
+    expect(input).toHaveValue('');
+    expect(document.activeElement).toBe(input);
   });
 });
