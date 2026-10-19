@@ -1,5 +1,5 @@
 import { render, screen } from '@testing-library/react';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { BacklogColumn } from './BacklogColumn';
 import type { Task } from '../types';
 
@@ -83,5 +83,26 @@ describe('BacklogColumn component', () => {
     );
 
     expect(screen.getByTestId('add-task-btn')).toBeInTheDocument();
+  });
+
+  it('renders AddTaskForm when onAddTask is provided and no headerAction', () => {
+    const onAddTask = vi.fn();
+    render(<BacklogColumn onAddTask={onAddTask} />);
+
+    expect(screen.getByTestId('add-task-form')).toBeInTheDocument();
+    expect(screen.getByTestId('add-task-input')).toBeInTheDocument();
+  });
+
+  it('prioritizes headerAction over onAddTask when both are provided', () => {
+    const onAddTask = vi.fn();
+    render(
+      <BacklogColumn
+        headerAction={<button data-testid="custom-action">Custom</button>}
+        onAddTask={onAddTask}
+      />
+    );
+
+    expect(screen.getByTestId('custom-action')).toBeInTheDocument();
+    expect(screen.queryByTestId('add-task-form')).not.toBeInTheDocument();
   });
 });

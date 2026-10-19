@@ -1,6 +1,7 @@
 import React from 'react';
 import type { Task } from '../types';
 import { BACKLOG_DROPPABLE_ID } from '../constants';
+import { AddTaskForm } from './AddTaskForm';
 
 export interface BacklogColumnProps {
   /** Lista zadań znajdujących się w Backlogu */
@@ -11,6 +12,8 @@ export interface BacklogColumnProps {
   children?: React.ReactNode;
   /** Opcjonalny element akcji w nagłówku (np. formularz szybkiego dodawania zadania AddTaskForm) */
   headerAction?: React.ReactNode;
+  /** Opcjonalny callback szybkiego dodawania zadania (automatycznie renderuje AddTaskForm, jeśli brak headerAction) */
+  onAddTask?: (title: string) => void;
   /** Dodatkowe klasy CSS */
   className?: string;
 }
@@ -23,9 +26,11 @@ export function BacklogColumn({
   taskCount,
   children,
   headerAction,
+  onAddTask,
   className = '',
 }: BacklogColumnProps) {
   const count = taskCount ?? tasks?.length ?? 0;
+  const actionContent = headerAction !== undefined ? headerAction : onAddTask ? <AddTaskForm onAddTask={onAddTask} /> : null;
 
   return (
     <aside
@@ -53,7 +58,7 @@ export function BacklogColumn({
         </div>
 
         {/* Opcjonalny slot na formularz dodawania zadań (AddTaskForm) */}
-        {headerAction ? <div className="mt-3">{headerAction}</div> : null}
+        {actionContent ? <div className="mt-3">{actionContent}</div> : null}
       </div>
 
       {/* Kontener listy zadań (obszar zrzutu dla dnd-kit) */}

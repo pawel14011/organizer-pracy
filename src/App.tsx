@@ -12,6 +12,7 @@ export function App() {
   const {
     backlogTasks,
     getTasksByDay,
+    addTask,
     toggleTaskStatus,
     cycleTaskPriority,
     deleteTask,
@@ -47,6 +48,7 @@ export function App() {
         <BacklogColumn
           tasks={backlogTasks}
           taskCount={backlogTasks.length}
+          onAddTask={addTask}
         >
           {backlogTasks.length > 0
             ? backlogTasks.map((task) => (
