@@ -152,4 +152,16 @@ describe('App Layout Integration', () => {
     expect(input).toHaveValue('');
     expect(document.activeElement).toBe(input);
   });
+
+  it('renders helpful empty states encouraging task dropping or creation across all columns', () => {
+    render(<App />);
+
+    expect(screen.getByText('Brak zadań w Backlogu')).toBeInTheDocument();
+    expect(screen.getByText('Wpisz zadanie powyżej')).toBeInTheDocument();
+
+    const emptyDayStates = screen.getAllByText('Brak zadań');
+    expect(emptyDayStates).toHaveLength(7);
+    const dropHints = screen.getAllByText('Upuść zadanie tutaj');
+    expect(dropHints).toHaveLength(7);
+  });
 });

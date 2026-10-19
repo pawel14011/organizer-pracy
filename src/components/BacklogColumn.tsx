@@ -72,9 +72,10 @@ export function BacklogColumn({
         ) : (
           <div
             data-testid="backlog-empty-state"
-            className="flex flex-1 items-center justify-center rounded-lg border border-dashed border-slate-200 p-6 text-center text-xs text-slate-400"
+            className="flex flex-1 flex-col items-center justify-center gap-1 rounded-lg border border-dashed border-slate-200 p-6 text-center text-xs text-slate-400"
           >
-            Brak zadań w Backlogu
+            <span className="font-medium text-slate-500">Brak zadań w Backlogu</span>
+            <span className="text-[11px] text-slate-400">Wpisz zadanie powyżej</span>
           </div>
         )}
       </div>
