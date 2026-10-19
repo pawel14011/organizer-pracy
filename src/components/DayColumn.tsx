@@ -104,6 +104,7 @@ export function DayColumn({
 
   return (
     <div
+      ref={setNodeRef}
       data-testid={`column-day-${day}`}
       data-day={day}
       data-column-over={isTargetOver ? 'true' : 'false'}
@@ -143,7 +144,6 @@ export function DayColumn({
 
       {/* Kontener listy zadań (obszar zrzutu dla dnd-kit z SortableContext) */}
       <div
-        ref={setNodeRef}
         id={day}
         data-testid={`droppable-${day}`}
         data-is-over={isTargetOver ? 'true' : 'false'}

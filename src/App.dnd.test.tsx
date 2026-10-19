@@ -1,7 +1,6 @@
 import { render, screen, act } from '@testing-library/react';
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import {
-  closestCorners,
   type DragStartEvent,
   type DragEndEvent,
   type DragOverEvent,
@@ -10,6 +9,7 @@ import {
 } from '@dnd-kit/core';
 import App from './App';
 import { DEFAULT_TASKS_STORAGE_KEY } from './utils/storage';
+import { kanbanCollisionDetection } from './utils';
 import type { Task } from './types';
 
 // Przechwytywanie właściwości przekazanych do DndContext w celu precyzyjnej weryfikacji konfiguracji
@@ -43,11 +43,11 @@ describe('App DndContext and Sensor Configuration Integration', () => {
     vi.restoreAllMocks();
   });
 
-  it('configures DndContext with closestCorners collision detection and 2 sensors', () => {
+  it('configures DndContext with kanbanCollisionDetection and 2 sensors', () => {
     render(<App />);
 
     expect(capturedDndProps).toBeDefined();
-    expect(capturedDndProps.collisionDetection).toBe(closestCorners);
+    expect(capturedDndProps.collisionDetection).toBe(kanbanCollisionDetection);
     expect(capturedDndProps.sensors).toBeDefined();
     expect(capturedDndProps.sensors).toHaveLength(2);
     expect(typeof capturedDndProps.onDragStart).toBe('function');

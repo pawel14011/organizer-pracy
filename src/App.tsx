@@ -1,12 +1,12 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   DndContext,
-  closestCorners,
   DragOverlay,
   type DragStartEvent,
   type DragOverEvent,
   type DragEndEvent,
   type DragCancelEvent,
+  type CollisionDetection,
 } from '@dnd-kit/core';
 import { useTasks, useDndSensors } from './hooks';
 import {
@@ -18,13 +18,15 @@ import {
   TaskCard,
 } from './components';
 import { WEEKDAYS, BACKLOG_DROPPABLE_ID } from './constants';
-import { isToday, isPastDay } from './utils';
+import { isToday, isPastDay, kanbanCollisionDetection } from './utils';
 import type { DayOfWeek, Weekday } from './types';
 
 /**
  * Właściwości komponentu App (wspierające rozszerzalność oraz testy integracyjne dnd-kit).
  */
 export interface AppProps {
+  /** Opcjonalna strategia detekcji kolizji (domyślnie kanbanCollisionDetection) */
+  collisionDetection?: CollisionDetection;
   /** Opcjonalny callback wywoływany w momencie rozpoczęcia przeciągania (onDragStart) */
   onDragStart?: (event: DragStartEvent) => void;
   /** Opcjonalny callback wywoływany podczas przesuwania elementu nad kontenerem (onDragOver) */
@@ -41,6 +43,7 @@ export interface AppProps {
  * oraz nadrzędny DndContext zarządzający gestami przeciągania kafelków zadań.
  */
 export function App({
+  collisionDetection: collisionDetectionProp,
   onDragStart: onDragStartProp,
   onDragOver: onDragOverProp,
   onDragEnd: onDragEndProp,
@@ -171,7 +174,7 @@ export function App({
   return (
     <DndContext
       sensors={sensors}
-      collisionDetection={closestCorners}
+      collisionDetection={collisionDetectionProp ?? kanbanCollisionDetection}
       onDragStart={handleDragStart}
       onDragOver={handleDragOver}
       onDragEnd={handleDragEnd}

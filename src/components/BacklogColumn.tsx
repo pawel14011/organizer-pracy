@@ -88,6 +88,7 @@ export function BacklogColumn({
 
   return (
     <aside
+      ref={setNodeRef}
       data-testid="column-backlog"
       data-column-over={isTargetOver ? 'true' : 'false'}
       aria-label="Backlog"
@@ -118,7 +119,6 @@ export function BacklogColumn({
 
       {/* Kontener listy zadań (obszar zrzutu dla dnd-kit z SortableContext) */}
       <div
-        ref={setNodeRef}
         id={BACKLOG_DROPPABLE_ID}
         data-testid="droppable-backlog"
         data-is-over={isTargetOver ? 'true' : 'false'}
