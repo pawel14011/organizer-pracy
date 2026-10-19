@@ -5,6 +5,6 @@ test.describe('E2E Smoke Test', () => {
     await page.goto('/');
 
     await expect(page.getByRole('heading', { level: 1, name: /organizer pracy/i })).toBeVisible();
-    await expect(page.getByText(/priorytet: wysoki/i)).toBeVisible();
+    await expect(page.getByTestId('column-backlog')).toBeVisible();
   });
 });
