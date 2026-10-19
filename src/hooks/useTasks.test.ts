@@ -648,6 +648,103 @@ describe('useTasks hook', () => {
     });
   });
 
+  describe('returnOverdueToBacklog', () => {
+    it('przenosi wszystkie niewykonane zadania z wybranego dnia na koniec Backlogu', () => {
+      const tasks: Task[] = [
+        createMockTask({ id: 'backlog-0', title: 'B0', day: null, order: 0 }),
+        createMockTask({ id: 'mon-1', title: 'Pon 1', day: 'mon', status: 'todo', order: 0 }),
+        createMockTask({ id: 'mon-2', title: 'Pon 2', day: 'mon', status: 'todo', order: 1 }),
+      ];
+      saveTasksToStorage(tasks, TEST_STORAGE_KEY);
+
+      const { result } = renderHook(() => useTasks(TEST_STORAGE_KEY));
+
+      act(() => {
+        result.current.returnOverdueToBacklog('mon');
+      });
+
+      // Poniedziałek jest pusty
+      expect(result.current.getTasksByDay('mon')).toHaveLength(0);
+
+      // Backlog ma 3 zadania w prawidłowej kolejności
+      const backlog = result.current.backlogTasks;
+      expect(backlog).toHaveLength(3);
+      expect(backlog[0].id).toBe('backlog-0');
+      expect(backlog[0].order).toBe(0);
+
+      expect(backlog[1].id).toBe('mon-1');
+      expect(backlog[1].day).toBeNull();
+      expect(backlog[1].order).toBe(1);
+
+      expect(backlog[2].id).toBe('mon-2');
+      expect(backlog[2].day).toBeNull();
+      expect(backlog[2].order).toBe(2);
+
+      // Zapis w LocalStorage
+      const stored = loadTasksFromStorage(TEST_STORAGE_KEY);
+      expect(stored.filter((t) => t.day === null)).toHaveLength(3);
+    });
+
+    it('pozostawia zadania wykonane (done) w danym dniu i normalizuje ich indeksy order', () => {
+      const tasks: Task[] = [
+        createMockTask({ id: 'tue-todo-1', title: 'Wt Todo 1', day: 'tue', status: 'todo', order: 0 }),
+        createMockTask({ id: 'tue-done-1', title: 'Wt Done 1', day: 'tue', status: 'done', order: 1 }),
+        createMockTask({ id: 'tue-todo-2', title: 'Wt Todo 2', day: 'tue', status: 'todo', order: 2 }),
+        createMockTask({ id: 'tue-done-2', title: 'Wt Done 2', day: 'tue', status: 'done', order: 3 }),
+      ];
+      saveTasksToStorage(tasks, TEST_STORAGE_KEY);
+
+      const { result } = renderHook(() => useTasks(TEST_STORAGE_KEY));
+
+      act(() => {
+        result.current.returnOverdueToBacklog('tue');
+      });
+
+      // We wtorku zostają tylko wykonane zadania, znormalizowane od 0
+      const tueTasks = result.current.getTasksByDay('tue');
+      expect(tueTasks).toHaveLength(2);
+      expect(tueTasks[0].id).toBe('tue-done-1');
+      expect(tueTasks[0].order).toBe(0);
+      expect(tueTasks[1].id).toBe('tue-done-2');
+      expect(tueTasks[1].order).toBe(1);
+
+      // Backlog otrzymuje zadania niewykonane
+      const backlog = result.current.backlogTasks;
+      expect(backlog).toHaveLength(2);
+      expect(backlog[0].id).toBe('tue-todo-1');
+      expect(backlog[0].order).toBe(0);
+      expect(backlog[1].id).toBe('tue-todo-2');
+      expect(backlog[1].order).toBe(1);
+    });
+
+    it('nie wykonuje zmian, jeśli w danym dniu wszystkie zadania są już wykonane', () => {
+      const tasks: Task[] = [
+        createMockTask({ id: 'wed-done-1', title: 'Śr Done 1', day: 'wed', status: 'done', order: 0 }),
+      ];
+      saveTasksToStorage(tasks, TEST_STORAGE_KEY);
+
+      const { result } = renderHook(() => useTasks(TEST_STORAGE_KEY));
+
+      act(() => {
+        result.current.returnOverdueToBacklog('wed');
+      });
+
+      expect(result.current.getTasksByDay('wed')).toHaveLength(1);
+      expect(result.current.backlogTasks).toHaveLength(0);
+    });
+
+    it('nie wykonuje zmian, jeśli w wybranym dniu brak jakichkolwiek zadań', () => {
+      const { result } = renderHook(() => useTasks(TEST_STORAGE_KEY));
+
+      act(() => {
+        result.current.returnOverdueToBacklog('fri');
+      });
+
+      expect(result.current.tasks).toHaveLength(0);
+      expect(result.current.backlogTasks).toHaveLength(0);
+    });
+  });
+
   describe('clearTasks i setTasks', () => {
     it('clearTasks czyści stan aplikacji i usuwa dane z LocalStorage', () => {
       const initialTask = createMockTask({

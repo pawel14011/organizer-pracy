@@ -1,6 +1,7 @@
 import React, { useMemo } from 'react';
 import { useDroppable, useDndContext } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
+import { RotateCcw } from 'lucide-react';
 import type { Task, Weekday } from '../types';
 import { DAY_LABELS, DAY_SHORT_LABELS } from '../constants';
 
@@ -21,6 +22,10 @@ export interface DayColumnProps {
   children?: React.ReactNode;
   /** Opcjonalny element akcji w nagłówku kolumny */
   headerAction?: React.ReactNode;
+  /** Callback przenoszący wszystkie zaległe zadania z tego dnia do Backlogu */
+  onReturnOverdue?: (day: Weekday) => void;
+  /** Opcjonalna flaga jawnie wskazująca obecność zadań zaległych */
+  hasOverdue?: boolean;
   /** Dodatkowe klasy CSS */
   className?: string;
 }
@@ -39,6 +44,8 @@ export function DayColumn({
   isOver: isOverProp,
   children,
   headerAction,
+  onReturnOverdue,
+  hasOverdue,
   className = '',
 }: DayColumnProps) {
   const count = taskCount ?? tasks?.length ?? 0;
@@ -102,6 +109,18 @@ export function DayColumn({
     ? 'bg-blue-600 text-white font-bold'
     : 'bg-slate-200/70 text-slate-600 font-semibold';
 
+  // Zadania zaległe występują wyłącznie w przeszłych dniach (isPast)
+  // gdy istnieją zadania niewykonane (status !== 'done')
+  const hasOverdueTasks =
+    isPast &&
+    (hasOverdue !== undefined
+      ? hasOverdue
+      : tasks
+        ? tasks.some((t) => t.status !== 'done')
+        : false);
+
+  const showOverdueButton = Boolean(hasOverdueTasks && onReturnOverdue);
+
   return (
     <div
       ref={setNodeRef}
@@ -138,6 +157,22 @@ export function DayColumn({
             {count}
           </span>
         </div>
+
+        {showOverdueButton ? (
+          <button
+            type="button"
+            onClick={() => onReturnOverdue?.(day)}
+            onPointerDown={(e) => e.stopPropagation()}
+            onMouseDown={(e) => e.stopPropagation()}
+            data-testid={`day-return-overdue-btn-${day}`}
+            aria-label="Przenieś zaległe do backlogu"
+            title="Przenieś zaległe zadania do Backlogu"
+            className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-lg border border-amber-300 bg-amber-50 px-2 py-1 text-xs font-semibold text-amber-800 transition-colors hover:bg-amber-100 hover:border-amber-400 focus:outline-none focus:ring-2 focus:ring-amber-500 cursor-pointer"
+          >
+            <RotateCcw className="h-3.5 w-3.5 shrink-0 text-amber-700" />
+            <span className="truncate">Przenieś zaległe do backlogu</span>
+          </button>
+        ) : null}
 
         {headerAction ? <div className="mt-2">{headerAction}</div> : null}
       </div>

@@ -164,4 +164,119 @@ describe('App Layout Integration', () => {
     const dropHints = screen.getAllByText('Upuść zadanie tutaj');
     expect(dropHints).toHaveLength(7);
   });
+
+  describe('Overdue tasks integration and backlog restoration', () => {
+    it('correctly identifies overdue tasks, renders return buttons, and restores them to Backlog individually and in batch', () => {
+      // Środa, 21 października 2026
+      const mockWednesday = new Date(2026, 9, 21, 12, 0, 0);
+      vi.useFakeTimers();
+      vi.setSystemTime(mockWednesday);
+
+      const testTasks: Task[] = [
+        {
+          id: 'task-mon-todo',
+          title: 'Zadanie Poniedziałek Todo',
+          status: 'todo',
+          priority: 'high',
+          day: 'mon',
+          order: 0,
+          createdAt: '2026-10-19T10:00:00.000Z',
+        },
+        {
+          id: 'task-mon-done',
+          title: 'Zadanie Poniedziałek Wykonane',
+          status: 'done',
+          priority: 'low',
+          day: 'mon',
+          order: 1,
+          createdAt: '2026-10-19T10:00:00.000Z',
+        },
+        {
+          id: 'task-tue-todo',
+          title: 'Zadanie Wtorek Todo',
+          status: 'todo',
+          priority: 'medium',
+          day: 'tue',
+          order: 0,
+          createdAt: '2026-10-20T10:00:00.000Z',
+        },
+        {
+          id: 'task-wed-todo',
+          title: 'Zadanie Środa Dzisiaj',
+          status: 'todo',
+          priority: 'medium',
+          day: 'wed',
+          order: 0,
+          createdAt: '2026-10-21T10:00:00.000Z',
+        },
+      ];
+
+      localStorage.setItem(DEFAULT_TASKS_STORAGE_KEY, JSON.stringify(testTasks));
+
+      render(<App />);
+
+      // Sprawdzenie kafelków poniedziałkowych
+      const monCards = screen.getAllByTestId('task-card');
+      const monTodoCard = monCards.find(
+        (c) => c.getAttribute('data-task-id') === 'task-mon-todo'
+      );
+      const monDoneCard = monCards.find(
+        (c) => c.getAttribute('data-task-id') === 'task-mon-done'
+      );
+      const wedCard = monCards.find(
+        (c) => c.getAttribute('data-task-id') === 'task-wed-todo'
+      );
+
+      // Zadanie z poniedziałku niewykonane ma status zaległego
+      expect(monTodoCard).toHaveAttribute('data-overdue', 'true');
+      expect(monTodoCard?.querySelector('[data-testid="task-overdue-badge"]')).toBeInTheDocument();
+      expect(monTodoCard?.querySelector('[data-testid="task-return-btn"]')).toBeInTheDocument();
+
+      // Zadanie z poniedziałku wykonane NIE jest zaległe
+      expect(monDoneCard).toHaveAttribute('data-overdue', 'false');
+      expect(monDoneCard?.querySelector('[data-testid="task-overdue-badge"]')).toBeNull();
+      expect(monDoneCard?.querySelector('[data-testid="task-return-btn"]')).toBeNull();
+
+      // Zadanie z dzisiaj (środa) NIE jest zaległe
+      expect(wedCard).toHaveAttribute('data-overdue', 'false');
+      expect(wedCard?.querySelector('[data-testid="task-overdue-badge"]')).toBeNull();
+
+      // Przyciski zbiorcze w nagłówkach przeszłych dni
+      expect(screen.getByTestId('day-return-overdue-btn-mon')).toBeInTheDocument();
+      expect(screen.getByTestId('day-return-overdue-btn-tue')).toBeInTheDocument();
+      expect(screen.queryByTestId('day-return-overdue-btn-wed')).not.toBeInTheDocument();
+
+      // KROK 1: Kliknięcie przycisku przywracania na kafelku wtorkowym
+      const tueReturnBtn = screen
+        .getByText('Zadanie Wtorek Todo')
+        .closest('[data-testid="task-card"]')
+        ?.querySelector('[data-testid="task-return-btn"]');
+      expect(tueReturnBtn).toBeInTheDocument();
+
+      fireEvent.click(tueReturnBtn!);
+
+      // Wtorkowe zadanie trafia do Backlogu
+      expect(screen.getByTestId('backlog-count')).toHaveTextContent('1');
+      expect(screen.getByTestId('day-count-tue')).toHaveTextContent('0');
+
+      // Przycisk zbiorczy we wtorku znika (brak zaległych zadań)
+      expect(screen.queryByTestId('day-return-overdue-btn-tue')).not.toBeInTheDocument();
+
+      // KROK 2: Kliknięcie przycisku zbiorczego w nagłówku poniedziałku
+      const monBatchBtn = screen.getByTestId('day-return-overdue-btn-mon');
+      fireEvent.click(monBatchBtn);
+
+      // Zadanie niewykonane przeniesione do Backlogu, wykonane pozostaje w poniedziałku
+      expect(screen.getByTestId('backlog-count')).toHaveTextContent('2');
+      expect(screen.getByTestId('day-count-mon')).toHaveTextContent('1');
+
+      // Przycisk zbiorczy w poniedziałku znika
+      expect(screen.queryByTestId('day-return-overdue-btn-mon')).not.toBeInTheDocument();
+
+      // Wykonane zadanie nadal znajduje się w kolumnie poniedziałku
+      expect(screen.getByText('Zadanie Poniedziałek Wykonane')).toBeInTheDocument();
+
+      vi.useRealTimers();
+    });
+  });
 });
