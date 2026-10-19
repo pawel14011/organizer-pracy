@@ -81,6 +81,7 @@ export function App({
     moveTask,
     returnToBacklog,
     returnOverdueToBacklog,
+    setTasks,
   } = useTasks();
 
   // Dynamiczny stan daty referencyjnej do obsługi przejścia północy bez przeładowania strony
@@ -223,8 +224,11 @@ export function App({
         data-active-task-id={activeTaskId ?? undefined}
         className="flex h-screen flex-col bg-slate-100 font-sans text-slate-900 antialiased overflow-hidden"
       >
-        {/* Górny pasek nawigacyjny z miejscem na akcje kopii zapasowej */}
-        <Header />
+        {/* Górny pasek nawigacyjny ze zintegrowanym panelem akcji kopii zapasowej */}
+        <Header
+          tasks={tasks}
+          onImportTasks={setTasks}
+        />
 
         {/* Główna przestrzeń robocza: Backlog po lewej, Stały Tydzień po prawej */}
         <main className="flex flex-1 min-h-0 gap-4 p-4 lg:p-6 overflow-hidden">
