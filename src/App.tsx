@@ -2,12 +2,15 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   DndContext,
   DragOverlay,
+  defaultDropAnimationSideEffects,
   type DragStartEvent,
   type DragOverEvent,
   type DragEndEvent,
   type DragCancelEvent,
   type CollisionDetection,
+  type DropAnimation,
 } from '@dnd-kit/core';
+import { arrayMove } from '@dnd-kit/sortable';
 import { useTasks, useDndSensors } from './hooks';
 import {
   Header,
@@ -20,6 +23,23 @@ import {
 import { WEEKDAYS, BACKLOG_DROPPABLE_ID } from './constants';
 import { isToday, isPastDay, kanbanCollisionDetection } from './utils';
 import type { DayOfWeek, Weekday } from './types';
+
+/**
+ * Konfiguracja płynnej animacji upuszczenia (dropAnimation) dla komponentu DragOverlay.
+ * Zapewnia brak artefaktów wizualnych poprzez zachowanie stonowanej przezroczystości (0.4)
+ * oryginalnego elementu podczas animacji powrotu/upuszczenia.
+ */
+export const dropAnimationConfig: DropAnimation = {
+  sideEffects: defaultDropAnimationSideEffects({
+    styles: {
+      active: {
+        opacity: '0.4',
+      },
+    },
+  }),
+  duration: 180,
+  easing: 'cubic-bezier(0.18, 0.67, 0.6, 1.22)',
+};
 
 /**
  * Właściwości komponentu App (wspierające rozszerzalność oraz testy integracyjne dnd-kit).
@@ -109,7 +129,7 @@ export function App({
     [onDragOverProp]
   );
 
-  // Obsługa zakończenia przeciągania: wyznaczenie docelowego dnia i indeksu, oraz wywołanie moveTask
+  // Obsługa zakończenia przeciągania: wyznaczenie docelowego dnia i indeksu (newOrder), oraz wywołanie moveTask
   const handleDragEnd = useCallback(
     (event: DragEndEvent) => {
       setActiveTaskId(null);
@@ -133,14 +153,14 @@ export function App({
       }
 
       let targetDay: DayOfWeek | undefined;
-      let targetIndex = 0;
+      let newOrder = 0;
 
       if (overId === BACKLOG_DROPPABLE_ID) {
         targetDay = null;
-        targetIndex = backlogTasks.length;
+        newOrder = backlogTasks.length;
       } else if (WEEKDAYS.includes(overId as Weekday)) {
         targetDay = overId as Weekday;
-        targetIndex = getTasksByDay(targetDay).length;
+        newOrder = getTasksByDay(targetDay).length;
       } else {
         // overId wskazuje na inny kafelek zadania
         const overTask = tasks.find((task) => task.id === overId);
@@ -148,15 +168,32 @@ export function App({
           targetDay = overTask.day;
           const targetColumnTasks =
             targetDay === null ? backlogTasks : getTasksByDay(targetDay);
-          const foundIndex = targetColumnTasks.findIndex(
+          const overIndex = targetColumnTasks.findIndex(
             (task) => task.id === overId
           );
-          targetIndex = foundIndex >= 0 ? foundIndex : targetColumnTasks.length;
+          if (overIndex >= 0) {
+            if (activeTask.day === targetDay) {
+              const activeIndex = targetColumnTasks.findIndex(
+                (task) => task.id === activeId
+              );
+              if (activeIndex >= 0) {
+                // Wyznaczenie nowej pozycji indeksu za pomocą arrayMove z @dnd-kit/sortable
+                const reordered = arrayMove(targetColumnTasks, activeIndex, overIndex);
+                newOrder = reordered.findIndex((task) => task.id === activeId);
+              } else {
+                newOrder = overIndex;
+              }
+            } else {
+              newOrder = overIndex;
+            }
+          } else {
+            newOrder = targetColumnTasks.length;
+          }
         }
       }
 
       if (targetDay !== undefined) {
-        moveTask(activeId, targetDay, targetIndex);
+        moveTask(activeId, targetDay, newOrder);
       }
     },
     [tasks, backlogTasks, getTasksByDay, moveTask, onDragEndProp]
@@ -248,20 +285,20 @@ export function App({
         </main>
       </div>
 
-      {/* Pływający podgląd przeciąganego kafelka wyświetlany poza kontenerami z overflow */}
-      <DragOverlay
-        dropAnimation={{
-          duration: 180,
-          easing: 'cubic-bezier(0.18, 0.67, 0.6, 1.22)',
-        }}
-      >
+      {/* Pływający podgląd przeciąganego kafelka wyświetlany poza kontenerami z overflow, z lekkim cieniem i delikatnym obrotem (rotate-2) */}
+      <DragOverlay dropAnimation={dropAnimationConfig}>
         {activeTask ? (
-          <TaskCard
-            task={activeTask}
-            isDragging={true}
-            data-testid="drag-overlay-card"
-            className="shadow-2xl ring-2 ring-blue-500 rotate-2 scale-105 cursor-grabbing pointer-events-none"
-          />
+          <div
+            data-testid="drag-overlay-wrapper"
+            className="rotate-2 pointer-events-none"
+          >
+            <TaskCard
+              task={activeTask}
+              isDragging={true}
+              data-testid="drag-overlay-card"
+              className="shadow-2xl ring-2 ring-blue-500 scale-105 cursor-grabbing"
+            />
+          </div>
         ) : null}
       </DragOverlay>
     </DndContext>

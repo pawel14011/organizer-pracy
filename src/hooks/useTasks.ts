@@ -1,22 +1,13 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { arrayMove } from '@dnd-kit/sortable';
 import type { Task, DayOfWeek, Priority, TaskStatus } from '../types';
 import { DEFAULT_TASKS_STORAGE_KEY, loadTasksFromStorage, saveTasksToStorage, clearTasksFromStorage } from '../utils/storage';
 
 /**
- * Przesuwa element w tablicy z indeksu `from` na indeks `to`.
- * Czysta funkcja pomocnicza bez mutacji tablicy źródłowej.
- *
- * @param array Tablica wejściowa
- * @param from Indeks początkowy
- * @param to Indeks docelowy
- * @returns Nowa tablica ze zmienioną kolejnością elementów
+ * Re-eksport algorytmu zmiany kolejności elementów w tablicy z @dnd-kit/sortable.
+ * Przesuwa element z indeksu `from` na indeks `to` bez mutacji tablicy źródłowej.
  */
-export function arrayMove<T>(array: T[], from: number, to: number): T[] {
-  const newArray = array.slice();
-  const [item] = newArray.splice(from, 1);
-  newArray.splice(to, 0, item);
-  return newArray;
-}
+export { arrayMove };
 
 /**
  * Bezpieczne generowanie identyfikatora UUID v4.
