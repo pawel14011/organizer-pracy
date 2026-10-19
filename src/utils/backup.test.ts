@@ -277,6 +277,31 @@ describe('backup utility module', () => {
       expect(() => validateAndSanitizeImport([javascriptProtocolPayload])).toThrowError(/złośliwy ładunek/);
     });
 
+    it('does not reject legitimate user titles containing words starting with on (e.g. online, onboarding)', () => {
+      const legitimateTasks: Task[] = [
+        {
+          ...validSampleTask,
+          id: 'task-online',
+          title: 'Spotkanie online = omówienie projektu',
+        },
+        {
+          ...validSampleTask,
+          id: 'task-onboarding',
+          title: 'Etap 1: onboarding = ukończony',
+        },
+        {
+          ...validSampleTask,
+          id: 'task-symbols',
+          title: 'Cena < 100 zł; stan online = aktywny',
+        },
+      ];
+
+      const result = validateAndSanitizeImport(legitimateTasks);
+      expect(result).toHaveLength(3);
+      expect(result[0].title).toBe('Spotkanie online = omówienie projektu');
+      expect(result[1].title).toBe('Etap 1: onboarding = ukończony');
+    });
+
     it('throws BackupValidationError when title after sanitization becomes empty', () => {
       const taskWithOnlyNullBytes = {
         ...validSampleTask,
