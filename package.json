@@ -6,6 +6,8 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
+    "build:wp": "tsc --noEmit && vite build --config vite.wp.config.ts",
+    "package:wp": "npm run build:wp && node scripts/package-wp.js",
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",

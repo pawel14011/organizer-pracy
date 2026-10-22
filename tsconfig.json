@@ -22,6 +22,7 @@
   "include": [
     "src",
     "vite.config.ts",
+    "vite.wp.config.ts",
     "vitest.config.ts",
     "vitest.setup.ts",
     "playwright.config.ts",
